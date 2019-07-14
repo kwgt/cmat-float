@@ -19,15 +19,17 @@ typedef struct {
 int cmat_new(int n, cmat_t** dst);
 int cmat_new2(double* src, int rows, int cols, cmat_t** dst);
 int cmat_destroy(cmat_t* dst);
-int cmat_add_row(cmat_t* ptr, double* r);
-int cmat_transpose(cmat_t* ptr, cmat_t** dst);
-int cmat_inverse(cmat_t* ptr, cmat_t** dst);
-int cmat_mul(cmat_t* ptr, cmat_t* op, cmat_t** dst);
-int cmat_det(cmat_t* ptr, double* dst);
+int cmat_append(cmat_t* ptr, double* r);
 
+int cmat_add(cmat_t* ptr, cmat_t* op, cmat_t** dst);
+int cmat_sub(cmat_t* ptr, cmat_t* op, cmat_t** dst);
+int cmat_mul(cmat_t* ptr, cmat_t* op, cmat_t** dst);
+int cmat_transpose(cmat_t* ptr, cmat_t** dst);
+int cmat_det(cmat_t* ptr, double* dst);
+int cmat_inverse(cmat_t* ptr, cmat_t** dst);
 
 int cmat_print(cmat_t* ptr, char* label);
-int cmat_is_equal(cmat_t* ptr, cmat_t* op);
+int cmat_compare(cmat_t* ptr, cmat_t* op, int* dst);
 int cmat_check(cmat_t* ptr, double* val, int* dst);
 int cmat_set_cutoff_threshold(cmat_t* ptr, double val);
 

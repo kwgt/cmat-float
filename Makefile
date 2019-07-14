@@ -15,7 +15,7 @@ $(TARGET): $(OBJS)
 
 src/cmat.c: include/cmat.h
 
-tests/test_all:
+tests/test_all: $(TARGET)
 	make -C tests $(@F)
 
 test: $(TARGET) tests/test_all

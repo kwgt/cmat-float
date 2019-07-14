@@ -16,9 +16,9 @@ test_transpose_1(void)
   int res;
 
   cmat_new(2, &m1);
-  cmat_add_row(m1, r1);
-  cmat_add_row(m1, r2);
-  cmat_add_row(m1, r3);
+  cmat_append(m1, r1);
+  cmat_append(m1, r2);
+  cmat_append(m1, r3);
   cmat_transpose(m1, &m2);
 
 #if 0
@@ -70,4 +70,54 @@ test_transpose_2(void)
 
   cmat_destroy(m1);
   cmat_destroy(m2);
+}
+
+void
+test_transpose_3(void)
+{
+  cmat_t* m1;
+
+  double src[] = {
+    1, 2, 3,
+    4, 5, 6
+  };
+
+  double mst[] = {
+    1, 4,
+    2, 5,
+    3, 6
+  };
+
+  int res;
+
+  cmat_new2(src, 2, 3, &m1);
+
+#if 0
+  printf("\n");
+  cmat_print(m1, "original");
+#endif
+
+  cmat_transpose(m1, NULL);
+
+#if 0
+  printf("\n");
+  cmat_print(m1, "transposed");
+#endif
+
+  cmat_check(m1, mst, &res);
+  CU_ASSERT(res == 0);
+
+  cmat_destroy(m1);
+}
+
+
+void
+init_test_transpose()
+{
+  CU_pSuite suite;
+
+  suite = CU_add_suite("transpose", NULL, NULL);
+  CU_add_test(suite, "transpose#1", test_transpose_1);
+  CU_add_test(suite, "transpose#2", test_transpose_2);
+  CU_add_test(suite, "transpose#3", test_transpose_3);
 }

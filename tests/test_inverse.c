@@ -45,3 +45,12 @@ test_inverse_1(void)
     CU_ASSERT(res == 0);
   }
 }
+
+void
+init_test_inverse()
+{
+  CU_pSuite suite;
+
+  suite = CU_add_suite("inverse", NULL, NULL);
+  CU_add_test(suite, "inverse#1", test_inverse_1);
+}

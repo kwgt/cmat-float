@@ -102,3 +102,15 @@ test_det_4(void)
   }
 }
 
+void
+init_test_det()
+{
+  CU_pSuite suite;
+
+  suite = CU_add_suite("det", NULL, NULL);
+
+  CU_add_test(suite, "det#1", test_det_1);
+  CU_add_test(suite, "det#2", test_det_2);
+  CU_add_test(suite, "det#3", test_det_3);
+  CU_add_test(suite, "det#4", test_det_4);
+}
