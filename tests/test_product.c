@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 #include "cmat.h"
-#include "test_sub.h"
+#include "test_product.h"
 
 #define N(x)        (sizeof(x) / sizeof(*x))
 
@@ -35,7 +35,7 @@ test_normal_1(void)
     create_matrix(&data[i].op1, &m1);
     create_matrix(&data[i].op2, &m2);
 
-    cmat_sub(m1, m2, &m3);
+    cmat_product(m1, m2, &m3);
 
 #if 0
     printf("\n");
@@ -72,7 +72,7 @@ test_normal_2(void)
     cmat_print(m2, NULL);
 #endif
 
-    cmat_sub(m1, m2, NULL);
+    cmat_product(m1, m2, NULL);
 
 #if 0
     printf("\n");
@@ -86,14 +86,12 @@ test_normal_2(void)
   }
 }
 
-
-
 void
-init_test_sub()
+init_test_product()
 {
   CU_pSuite suite;
 
-  suite = CU_add_suite("sub", NULL, NULL);
-  CU_add_test(suite, "sub#1", test_normal_1);
-  CU_add_test(suite, "sub#2", test_normal_2);
+  suite = CU_add_suite("product", NULL, NULL);
+  CU_add_test(suite, "product#1", test_normal_1);
+  CU_add_test(suite, "product#2", test_normal_2);
 }

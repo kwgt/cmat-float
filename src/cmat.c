@@ -914,7 +914,82 @@ cmat_sub(cmat_t* ptr, cmat_t* op, cmat_t** dst)
 }
 
 /**
- * 行列オブジェクトの積
+ * 行列のスカラー積
+ *  ptr * op → dst       (dst != NULL)
+ *  ptr * op → ptr       (dst == NULL)
+ *
+ * @param ptr   対象の行列オブジェクト
+ * @param op    スカラー値
+ * @param dst   転置結果の格納先
+ *
+ * @return エラーコード(0で正常終了)
+ */
+int
+cmat_mul(cmat_t* ptr, double op, cmat_t** dst)
+{
+  int ret;
+  cmat_t* obj;
+  int r;
+  int c;
+
+  double* d;
+  double* s;
+
+  /*
+   * initialize
+   */
+  ret = 0;
+  obj = NULL;
+
+  /*
+   * check argument
+   */
+  if (ptr == NULL) ret = DEFAULT_ERROR;
+
+  /*
+   * select target
+   */
+  if (!ret) {
+    if (dst) {
+      ret = alloc_object(ptr->rows, ptr->cols, ptr, &obj);
+    } else {
+      obj = ptr;
+    }
+  }
+
+  /*
+   * do add operation
+   */
+  if (!ret) {
+    for (r = 0; r < ptr->rows; r++) {
+      d = obj->tbl[r];
+      s = ptr->tbl[r];
+
+      for (c = 0; c < ptr->cols; c++) {
+        d[c] = s[c] * op;
+      }
+    }
+  }
+
+  /*
+   * put return parameter
+   */
+  if (!ret) {
+    if (dst) *dst = obj;
+  }
+
+  /*
+   * post process
+   */
+  if (ret) {
+    if (dst && obj) free_object(obj);
+  }
+
+  return ret;
+}
+
+/**
+ * 行列の積
  *  ptr * op → dst       (dst != NULL)
  *  ptr * op → ptr       (dst == NULL)
  *
@@ -925,7 +1000,7 @@ cmat_sub(cmat_t* ptr, cmat_t* op, cmat_t** dst)
  * @return エラーコード(0で正常終了)
  */
 int
-cmat_mul(cmat_t* ptr, cmat_t* op, cmat_t** dst)
+cmat_product(cmat_t* ptr, cmat_t* op, cmat_t** dst)
 {
   int ret;
   cmat_t* obj;
@@ -1000,7 +1075,7 @@ cmat_mul(cmat_t* ptr, cmat_t* op, cmat_t** dst)
 }
 
 /**
- * 行列オブジェクトの転置
+ * 行列の転置
  *  transpose(ptr) → dst       (dst != NULL)
  *  transpose(ptr) → ptr       (dst == NULL)
  *
@@ -1233,6 +1308,84 @@ cmat_det(cmat_t* ptr, double* dst)
    */
   if (!ret) {
     *dst = det;
+  }
+
+  return ret;
+}
+
+/**
+ * 行列のドット積の計算
+ *  ptr * op → dst
+ *
+ * @param ptr   対象の行列オブジェクト
+ * @param op    オペランド
+ * @param dst   算出結果の格納先のポインタ
+ *
+ * @return エラーコード(0で正常終了)
+ */
+int
+cmat_dot(cmat_t* ptr, cmat_t* op, double* dst)
+{
+  int ret;
+  double dot;
+  int i;
+  int n;
+
+  double* s;
+  double* o;
+
+  /*
+   * initialize
+   */
+  ret = 0;
+  dot = 0.0;
+
+  /*
+   * argument check
+   */
+  do {
+    if (ptr == NULL) {
+      ret = DEFAULT_ERROR;
+      break;
+    }
+
+    if (op == NULL) {
+      ret = DEFAULT_ERROR;
+      break;
+    }
+
+    if (dst == NULL) {
+      ret = DEFAULT_ERROR;
+      break;
+    }
+  } while (0);
+
+  /*
+   * check shape
+   */
+  if (!ret) {
+    if ((ptr->rows * ptr->cols) != (op->rows * op->cols)) ret = DEFAULT_ERROR;
+  }
+
+  /*
+   * calc dot product
+   */
+  if (!ret) {
+    n = ptr->rows * ptr->cols;
+
+    for (i = 0; i < n; i++) {
+      if (i % ptr->cols == 0) s = ptr->tbl[i / ptr->cols];
+      if (i % op->cols == 0) o = op->tbl[i / op->cols];
+
+      dot += *s++ * *o++;
+    }
+  }
+
+  /*
+   * put return parameter
+   */
+  if (!ret) {
+    *dst = dot;
   }
 
   return ret;

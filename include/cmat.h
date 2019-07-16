@@ -23,9 +23,11 @@ int cmat_append(cmat_t* ptr, double* r);
 
 int cmat_add(cmat_t* ptr, cmat_t* op, cmat_t** dst);
 int cmat_sub(cmat_t* ptr, cmat_t* op, cmat_t** dst);
-int cmat_mul(cmat_t* ptr, cmat_t* op, cmat_t** dst);
+int cmat_product(cmat_t* ptr, cmat_t* op, cmat_t** dst);
+int cmat_mul(cmat_t* ptr, double op, cmat_t** dst);
 int cmat_transpose(cmat_t* ptr, cmat_t** dst);
 int cmat_det(cmat_t* ptr, double* dst);
+int cmat_dot(cmat_t* ptr, cmat_t* op, double* dst);
 int cmat_inverse(cmat_t* ptr, cmat_t** dst);
 
 int cmat_print(cmat_t* ptr, char* label);

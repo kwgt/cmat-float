@@ -18,8 +18,8 @@ src/cmat.c: include/cmat.h
 tests/test_all: $(TARGET)
 	make -C tests $(@F)
 
-test: $(TARGET) tests/test_all
-	make -C tests $@
+test: tests/test_all
+	./$<
 
 clean:
 	make -C tests $@
