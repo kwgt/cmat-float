@@ -2,6 +2,8 @@ CFLAGS    += -g -I../include -I.
 LDFLAGS   += -g -L../lib -lcmat -lcunit
 
 CSRC      := main.c \
+             test_new.c \
+             test_destroy.c \
              test_add.c \
              test_sub.c \
              test_mul.c \
@@ -20,6 +22,11 @@ all: $(TARGET)
 $(TARGET): $(OBJS)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
+tt: tt.c
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
+test_new.o : test_new.c
+test_destroy.o : test_destroy.c
 test_add.o : test_add.c test_add.h
 test_sub.o : test_sub.c test_sub.h
 test_mul.o : test_mul.c test_mul.h

@@ -80,6 +80,35 @@ test_normal_2(void)
   }
 }
 
+static void
+test_error_1(void)
+{
+  int err;
+  cmat_t* m;
+
+  err = cmat_mul(NULL, 0.0, &m);
+
+  CU_ASSERT(err == CMAT_ERR_BADDR);
+
+  err = cmat_mul(NULL, 0.0, NULL);
+
+  CU_ASSERT(err == CMAT_ERR_BADDR);
+}
+
+static void
+test_error_2(void)
+{
+  int err;
+  cmat_t* m;
+
+  create_matrix(&data[0].op1, &m);
+
+  err = cmat_mul(m, NAN, NULL);
+  cmat_destroy(m);
+
+  CU_ASSERT(err == CMAT_ERR_INVAL);
+}
+
 void
 init_test_mul()
 {
@@ -88,4 +117,6 @@ init_test_mul()
   suite = CU_add_suite("mul", NULL, NULL);
   CU_add_test(suite, "mul#1", test_normal_1);
   CU_add_test(suite, "mul#2", test_normal_2);
+  CU_add_test(suite, "mul#E1", test_error_1);
+  CU_add_test(suite, "mul#E2", test_error_2);
 }

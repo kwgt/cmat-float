@@ -15,6 +15,7 @@ create_matrix(const matrix_info_t* info, cmat_t** dst)
 static void
 test_normal_1(void)
 {
+  int err;
   cmat_t* m1;
   cmat_t* m2;
   double dot;
@@ -24,7 +25,7 @@ test_normal_1(void)
     create_matrix(&data[i].op1, &m1);
     create_matrix(&data[i].op2, &m2);
 
-    cmat_dot(m1, m2, &dot);
+    err = cmat_dot(m1, m2, &dot);
 
 #if 0
     printf("\n");
@@ -35,11 +36,75 @@ test_normal_1(void)
     printf("%f\n", dot);
 #endif
 
+    CU_ASSERT(err == 0);
     CU_ASSERT(dot == data[i].ans);
 
     cmat_destroy(m1);
     cmat_destroy(m2);
   }
+}
+
+static void
+test_error_1(void)
+{
+  int err;
+  cmat_t* m;
+  double dot;
+  int i;
+
+  create_matrix(&data[0].op1, &m);
+
+  err = cmat_dot(NULL, m, &dot);
+  cmat_destroy(m);
+
+  CU_ASSERT(err == CMAT_ERR_BADDR);
+}
+
+static void
+test_error_2(void)
+{
+  cmat_t* m1;
+  cmat_t* m2;
+  double dot;
+  int err;
+
+  create_matrix(&data[0].op1, &m1);
+  create_matrix(&data[0].op2, &m2);
+
+  err = cmat_dot(m1, m2, NULL);
+  cmat_destroy(m1);
+  cmat_destroy(m2);
+
+  CU_ASSERT(err == CMAT_ERR_BADDR);
+}
+
+static void
+test_error_3(void)
+{
+  double v1[] = {
+    1, 2,
+    3, 4
+  };
+
+  cmat_t* m1;
+
+  double v2[] = {
+    1, 2, 3,
+    4, 5, 6
+  };
+
+  cmat_t* m2;
+  double dot;
+  int err;
+
+  cmat_new2(v1, 2, 2, &m1);
+  cmat_new2(v1, 2, 3, &m2);
+
+  err = cmat_dot(m1, m2, &dot);
+  cmat_destroy(m1);
+  cmat_destroy(m2);
+
+  CU_ASSERT(err == CMAT_ERR_SHAPE);
 }
 
 void
@@ -49,4 +114,7 @@ init_test_dot()
 
   suite = CU_add_suite("dot product", NULL, NULL);
   CU_add_test(suite, "dot#1", test_normal_1);
+  CU_add_test(suite, "dot#E1", test_error_1);
+  CU_add_test(suite, "dot#E2", test_error_2);
+  CU_add_test(suite, "dot#E3", test_error_3);
 }

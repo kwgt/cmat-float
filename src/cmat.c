@@ -15,6 +15,7 @@
 #define DEFAULT_CUTOFF      1e-10
 
 #define GROW(n)             ((n * 13) / 10)
+#define SWAP(a,b)           do {double t; t = a; a = b; b = t;} while(0)
 
 static void
 free_table(double** tbl, int rows)
@@ -42,7 +43,7 @@ alloc_table(int rows, int cols, double*** dst)
   do {
     tbl = (double**)malloc(sizeof(double*) * rows);
     if (!tbl) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_NOMEM;
       break;
     }
 
@@ -51,7 +52,7 @@ alloc_table(int rows, int cols, double*** dst)
     for (i = 0; i < rows; i++) {
       tbl[i] = (double*)malloc(sizeof(double) * cols);
       if (!tbl[i]) {
-        ret = DEFAULT_ERROR;
+        ret = CMAT_ERR_NOMEM;
         goto loop_out;
       }
     }
@@ -93,7 +94,7 @@ alloc_object(int rows, int cols, cmat_t* org, cmat_t** dst)
   do {
     obj = (cmat_t*)malloc(sizeof(cmat_t));
     if (obj == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_NOMEM;
       break;
     }
 
@@ -202,51 +203,95 @@ alloc_work(int n, double* src[])
 }
 
 /*
- * http://thira.plavox.info/blog/2008/06/_c.html
+ * http://hooktail.org/computer/index.php?LU%CA%AC%B2%F2
  */
 static int
-calc_det(double* src[], int n, double* dst)
+lu_decomp(double* p, int sz)
+{
+  int ret;
+  int i;
+  int j;
+  int k;
+  double max;
+  double tmp;
+
+  double* pi;
+  double* pj;
+
+  ret = 0;
+
+  for (i = 0, pi = p; i < sz; i++, pi += sz) {
+    max = fabs(pi[i]);
+    k   = i;
+
+    /* 注目行以降で最大の値（絶対値）の存在する行を探す */
+    for (j = i + 1, pj = p + (j * sz); j < sz; j++, pj += sz) {
+      tmp = fabs(pj[i]);
+
+      if (tmp > max) {
+        max = tmp;
+        k   = j;
+      }
+    }
+
+    /* 注目行と最大値のあった行を入れ替える */
+    if (i != k) {
+      pj = p + (k * sz);
+
+      for (j = 0; j < sz; j++) {
+        SWAP(pj[j], pi[j]);
+      }
+
+      ret++;
+    }
+
+    /* この時点で対角成分が0の場合は注目行に対する分解は終わってると
+       考えてよいので次の行に移動する */
+    if (pi[i] == 0.0) continue;
+
+    /* forwarding erase */
+    for (j = i + 1, pj = p + (j * sz); j < sz; j++, pj += sz) {
+      tmp = (pj[i] /= pi[i]);
+
+      for (k = i + 1; k < sz; k++) {
+        pj[k] -= tmp * pi[k];
+      }
+    }
+  }
+
+  return ret;
+}
+
+static int
+calc_det(double* src[], int sz, double* dst)
 {
   int ret;
   double* wrk;
   double det;
-  double tmp;
   int i;
   int j;
-  int k;
-
-  double *wi;
-  double *wj;
+  int tmp;
 
   do {
     ret = 0;
 
     /* alloc work buffer */
-    wrk = alloc_work(n, src);
+    wrk = alloc_work(sz, src);
     if (wrk == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_NOMEM;
       break;
     }
 
-    /* calc triagular matrix */
-    for (i = 0, wi = wrk; i < n; i++, wi += n) {
-      for (j = 0, wj = wrk; j < n; j++, wj += n) {
-        if (i == j) continue;
-
-        tmp = wj[i] / wi[i];
-        for (k = 0; k < n; k++) {
-          wj[k] -= wi[k] * tmp;
-        }
-      }
-    }
+    /* do LU decomposition */
+    tmp = lu_decomp(wrk, sz);
 
     /* calc diagonal multiplier */
-    det = 1.0;
+    det = (tmp & 1)? -1.0: 1.0;
+    tmp = sz + 1; 
 
-    for (i = 0, wi = wrk; i < n; i++, wi += (n + 1)) {
-      det *= *wi;
+    for (i = 0, j = 0; i < sz; i++, j += tmp) {
+      det *= wrk[j];
     }
-
   } while (0);
 
   if (wrk) free(wrk);
@@ -279,7 +324,7 @@ calc_inverse(double* src[], int n, double* dst[])
     /* alloc work buffer */
     wrk = alloc_work(n, src);
     if (wrk == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_NOMEM;
       break;
     }
 
@@ -429,12 +474,12 @@ cmat_new(int n, cmat_t** dst)
    */
   do {
     if (n <= 0) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BSIZE;
       break;
     }
 
     if (dst == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BADDR;
       break;
     }
   } while(0);
@@ -490,22 +535,22 @@ cmat_new2(double* val, int rows, int cols, cmat_t** dst)
    */
   do {
     if (val == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BADDR;
       break;
     }
 
     if (rows < 0) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BSIZE;
       break;
     }
 
     if (cols < 0) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BSIZE;
       break;
     }
 
     if (dst == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BADDR;
       break;
     }
   } while (0);
@@ -562,7 +607,7 @@ cmat_destroy(cmat_t* ptr)
   /*
    * argument check
    */
-  if (ptr == NULL) ret = DEFAULT_ERROR;
+  if (ptr == NULL) ret = CMAT_ERR_BADDR;
 
   /*
    * release memory
@@ -602,7 +647,7 @@ cmat_print(cmat_t* ptr, char* label)
   /*
    * argument check
    */
-  if (ptr == NULL) ret = DEFAULT_ERROR;
+  if (ptr == NULL) ret = CMAT_ERR_BADDR;
 
   /*
    * make format string
@@ -671,12 +716,12 @@ cmat_append(cmat_t* ptr, double* src)
    */
   do {
     if (ptr == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BADDR;
       break;
     }
 
     if (src == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BADDR;
       break;
     }
   } while (0);
@@ -686,7 +731,7 @@ cmat_append(cmat_t* ptr, double* src)
    */
   if (!ret) {
     row = (double*)malloc(sizeof(double) * ptr->cols);
-    if (row == NULL) ret = DEFAULT_ERROR;
+    if (row == NULL) ret = CMAT_ERR_NOMEM;
   }
 
   /*
@@ -701,7 +746,7 @@ cmat_append(cmat_t* ptr, double* src)
         ptr->capa = capa;
 
       } else {
-        ret = DEFAULT_ERROR;
+        ret = CMAT_ERR_NOMEM;
       }
     }
   }
@@ -759,12 +804,12 @@ cmat_add(cmat_t* ptr, cmat_t* op, cmat_t** dst)
    */
   do {
     if (ptr == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BADDR;
       break;
     }
 
     if (op == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BADDR;
       break;
     }
   } while (0);
@@ -773,7 +818,7 @@ cmat_add(cmat_t* ptr, cmat_t* op, cmat_t** dst)
    * check shape
    */
   if (!ret) {
-    if (ptr->rows != op->rows || ptr->cols != op->cols) ret = DEFAULT_ERROR;
+    if (ptr->rows != op->rows || ptr->cols != op->cols) ret = CMAT_ERR_SHAPE;
   }
 
   /*
@@ -853,12 +898,12 @@ cmat_sub(cmat_t* ptr, cmat_t* op, cmat_t** dst)
    */
   do {
     if (ptr == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BADDR;
       break;
     }
 
     if (op == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BADDR;
       break;
     }
   } while (0);
@@ -867,7 +912,7 @@ cmat_sub(cmat_t* ptr, cmat_t* op, cmat_t** dst)
    * check shape
    */
   if (!ret) {
-    if (ptr->rows != op->rows || ptr->cols != op->cols) ret = DEFAULT_ERROR;
+    if (ptr->rows != op->rows || ptr->cols != op->cols) ret = CMAT_ERR_SHAPE;
   }
 
   /*
@@ -944,7 +989,17 @@ cmat_mul(cmat_t* ptr, double op, cmat_t** dst)
   /*
    * check argument
    */
-  if (ptr == NULL) ret = DEFAULT_ERROR;
+  do {
+    if (ptr == NULL) {
+      ret = CMAT_ERR_BADDR;
+      break;
+    }
+
+    if (isnan(op)) {
+      ret = CMAT_ERR_INVAL;
+      break;
+    }
+  } while (0);
 
   /*
    * select target
@@ -1018,12 +1073,12 @@ cmat_product(cmat_t* ptr, cmat_t* op, cmat_t** dst)
    */
   do {
     if (ptr == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BADDR;
       break;
     }
 
     if (op == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BADDR;
       break;
     }
   } while (0);
@@ -1032,7 +1087,7 @@ cmat_product(cmat_t* ptr, cmat_t* op, cmat_t** dst)
    * check op value
    */
   if (!ret) {
-    if (ptr->cols != op->rows) ret = DEFAULT_ERROR;
+    if (ptr->cols != op->rows) ret = CMAT_ERR_SHAPE;
   }
 
   /*
@@ -1096,11 +1151,12 @@ cmat_transpose(cmat_t* ptr, cmat_t** dst)
    * initialize
    */
   ret = 0;
+  obj = NULL;
 
   /*
    * argument check
    */
-  if (ptr == NULL) ret = DEFAULT_ERROR;
+  if (ptr == NULL) ret = CMAT_ERR_BADDR;
 
   /*
    * alloc result object
@@ -1171,7 +1227,7 @@ cmat_inverse(cmat_t* ptr, cmat_t** dst)
   /*
    * argument check
    */
-  if (ptr == NULL) ret = DEFAULT_ERROR;
+  if (ptr == NULL) ret = CMAT_ERR_BADDR;
   
   /*
    * check if it's a regular matrix
@@ -1261,12 +1317,12 @@ cmat_det(cmat_t* ptr, double* dst)
    */
   do {
     if (ptr == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BADDR;
       break;
     }
 
     if (dst == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BADDR;
       break;
     }
   } while (0);
@@ -1275,7 +1331,7 @@ cmat_det(cmat_t* ptr, double* dst)
    * check shape
    */
   if (!ret) {
-    if (ptr->rows != ptr->cols) ret = DEFAULT_ERROR;
+    if (ptr->rows != ptr->cols) ret = CMAT_ERR_SHAPE;
   }
 
   /*
@@ -1345,17 +1401,17 @@ cmat_dot(cmat_t* ptr, cmat_t* op, double* dst)
    */
   do {
     if (ptr == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BADDR;
       break;
     }
 
     if (op == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BADDR;
       break;
     }
 
     if (dst == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BADDR;
       break;
     }
   } while (0);
@@ -1364,7 +1420,7 @@ cmat_dot(cmat_t* ptr, cmat_t* op, double* dst)
    * check shape
    */
   if (!ret) {
-    if ((ptr->rows * ptr->cols) != (op->rows * op->cols)) ret = DEFAULT_ERROR;
+    if ((ptr->rows * ptr->cols) != (op->rows * op->cols)) ret = CMAT_ERR_SHAPE;
   }
 
   /*
@@ -1422,17 +1478,17 @@ cmat_compare(cmat_t* ptr, cmat_t* op, int* dst)
    */
   do {
     if (ptr == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BADDR;
       break;
     }
 
     if (op == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BADDR;
       break;
     }
 
     if (dst == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BADDR;
       break;
     }
   } while (0);
@@ -1500,17 +1556,17 @@ cmat_check(cmat_t* ptr, double* val, int* dst)
    */
   do {
     if (ptr == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BADDR;
       break;
     }
 
     if (val == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BADDR;
       break;
     }
 
     if (dst == NULL) {
-      ret = DEFAULT_ERROR;
+      ret = CMAT_ERR_BADDR;
       break;
     }
   } while (0);
@@ -1564,7 +1620,7 @@ cmat_set_cutoff_threshold(cmat_t* ptr, double val)
   /*
    * check argument
    */
-  if (ptr == NULL) ret = DEFAULT_ERROR;
+  if (ptr == NULL) ret = CMAT_ERR_BADDR;
 
   /*
    * update context

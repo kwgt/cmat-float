@@ -56,6 +56,7 @@ check_matrix(cmat_t* org, cmat_t* inv, const matrix_info_t* info)
 static void
 test_normal_1(void)
 {
+  int err;
   cmat_t* m1;
   cmat_t* m2;
   int i;
@@ -63,7 +64,8 @@ test_normal_1(void)
   for (i = 0; i < N(data); i++) {
     create_matrix(&data[i].op, &m1);
 
-    cmat_inverse(m1, &m2);
+    err = cmat_inverse(m1, &m2);
+    CU_ASSERT(err == 0);
 
 #if 0
     printf("\n");
@@ -77,13 +79,14 @@ test_normal_1(void)
     check_matrix(m1, m2, &data[i].ans);
 
     cmat_destroy(m1);
-    cmat_destroy(m2);
+    if (err == 0) cmat_destroy(m2);
   }
 }
 
 static void
 test_normal_2(void)
 {
+  int err;
   cmat_t* m1;
   cmat_t* m2;
   int i;
@@ -97,7 +100,8 @@ test_normal_2(void)
     cmat_print(m1, NULL);
 #endif
 
-    cmat_inverse(m1, NULL);
+    err = cmat_inverse(m1, NULL);
+    CU_ASSERT(err == 0);
 
 #if 0
     printf("\n");
@@ -111,6 +115,38 @@ test_normal_2(void)
   }
 }
 
+static void
+test_error_1(void)
+{
+  int err;
+  cmat_t* m;
+
+  m   = NULL;
+  err = cmat_inverse(NULL, &m);
+
+  CU_ASSERT(err == CMAT_ERR_BADDR);
+  CU_ASSERT(m == NULL);
+}
+
+static void
+test_error_2(void)
+{
+  int err;
+  double v[] = {
+    1, 2, 3,
+    4, 5, 6
+  };
+
+  cmat_t* m;
+
+  cmat_new2(v, 2, 3, &m);
+
+  err = cmat_inverse(m, NULL);
+  cmat_destroy(m);
+
+  CU_ASSERT(err == CMAT_ERR_SHAPE);
+}
+
 void
 init_test_inverse()
 {
@@ -119,4 +155,6 @@ init_test_inverse()
   suite = CU_add_suite("inverse", NULL, NULL);
   CU_add_test(suite, "inverse#1", test_normal_1);
   CU_add_test(suite, "inverse#2", test_normal_2);
+  CU_add_test(suite, "inverse#E1", test_error_1);
+  CU_add_test(suite, "inverse#E2", test_error_2);
 }

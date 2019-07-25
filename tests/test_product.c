@@ -86,6 +86,57 @@ test_normal_2(void)
   }
 }
 
+static void
+test_error_1(void)
+{
+  cmat_t* m;
+  int err;
+
+  create_matrix(&data[0].op1, &m);
+
+  err = cmat_product(NULL, m, NULL);
+  cmat_destroy(m);
+
+  CU_ASSERT(err == CMAT_ERR_BADDR);
+}
+
+static void
+test_error_2(void)
+{
+  cmat_t* m;
+  int err;
+
+  create_matrix(&data[0].op1, &m);
+
+  err = cmat_product(m, NULL, NULL);
+  cmat_destroy(m);
+
+  CU_ASSERT(err == CMAT_ERR_BADDR);
+}
+
+static void
+test_error_3(void)
+{
+  double v[] = {
+    1, 2, 3,
+    4, 5, 6,
+  };
+
+  cmat_t* m1;
+  cmat_t* m2;
+  cmat_t* m3;
+  int err;
+
+  cmat_new2(v, 2, 3, &m1);
+  cmat_new2(v, 2, 3, &m2);
+
+  err = cmat_product(m1, m2, &m3);
+  cmat_destroy(m1);
+  cmat_destroy(m2);
+
+  CU_ASSERT(err == CMAT_ERR_SHAPE);
+}
+
 void
 init_test_product()
 {
@@ -94,4 +145,7 @@ init_test_product()
   suite = CU_add_suite("product", NULL, NULL);
   CU_add_test(suite, "product#1", test_normal_1);
   CU_add_test(suite, "product#2", test_normal_2);
+  CU_add_test(suite, "product#E1", test_error_1);
+  CU_add_test(suite, "product#E2", test_error_2);
+  CU_add_test(suite, "product#E3", test_error_3);
 }

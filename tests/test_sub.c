@@ -86,7 +86,45 @@ test_normal_2(void)
   }
 }
 
+static void
+test_error_1(void)
+{
+  int err;
+  cmat_t* m;
 
+  double v[] = {
+    1, 2,
+    3, 4
+  };
+
+  cmat_new2(v, 2, 2, &m);
+
+  err = cmat_sub(m, NULL, NULL);
+  
+  CU_ASSERT(err == CMAT_ERR_BADDR);
+
+  cmat_destroy(m);
+}
+
+static void
+test_error_2(void)
+{
+  int err;
+  cmat_t* m;
+
+  double v[] = {
+    1, 2,
+    3, 4
+  };
+
+  cmat_new2(v, 2, 2, &m);
+
+  err = cmat_sub(NULL, m, NULL);
+  
+  CU_ASSERT(err == CMAT_ERR_BADDR);
+
+  cmat_destroy(m);
+}
 
 void
 init_test_sub()
@@ -96,4 +134,6 @@ init_test_sub()
   suite = CU_add_suite("sub", NULL, NULL);
   CU_add_test(suite, "sub#1", test_normal_1);
   CU_add_test(suite, "sub#2", test_normal_2);
+  CU_add_test(suite, "sub#E1", test_error_1);
+  CU_add_test(suite, "sub#E2", test_error_2);
 }

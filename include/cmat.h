@@ -16,6 +16,12 @@ typedef struct {
   double coff;  // as cutoff
 } cmat_t;
 
+#define CMAT_ERR_NOMEM      -1
+#define CMAT_ERR_BADDR      -2
+#define CMAT_ERR_BSIZE      -3
+#define CMAT_ERR_INVAL      -4
+#define CMAT_ERR_SHAPE      -5
+
 int cmat_new(int n, cmat_t** dst);
 int cmat_new2(double* src, int rows, int cols, cmat_t** dst);
 int cmat_destroy(cmat_t* dst);

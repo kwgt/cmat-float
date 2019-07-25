@@ -1,6 +1,8 @@
 ﻿#include <CUnit/CUnit.h>
 #include <CUnit/Console.h>
 
+extern void init_test_new();
+extern void init_test_destroy();
 extern void init_test_add();
 extern void init_test_sub();
 extern void init_test_mul();
@@ -15,6 +17,8 @@ main(int argc, char* argv[])
 {
   CU_initialize_registry();
 
+  init_test_new();
+  init_test_destroy();
   init_test_add();
   init_test_sub();
   init_test_mul();

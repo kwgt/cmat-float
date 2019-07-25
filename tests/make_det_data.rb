@@ -28,12 +28,13 @@ print <<~EOT
   } data[] = {
 EOT
 
-100.times {
+100.times { |i|
   n = rand(15) + 1
 
   op  = Matrix[*(Array.new(n) {Array.new(n) {rand(-10...+10)}})]
   ans = op.det
 
+  print "  // #{i}\n"
   print "  {\n"
   print_c_source(op)
   print "    #{ans}\n"
