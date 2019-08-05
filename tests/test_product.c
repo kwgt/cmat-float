@@ -9,7 +9,7 @@
 static int
 create_matrix(const matrix_info_t* info, cmat_t** dst)
 {
-  return cmat_new2(info->val, info->rows, info->cols, dst);
+  return cmat_new(info->val, info->rows, info->cols, dst);
 }
 
 static void
@@ -127,8 +127,8 @@ test_error_3(void)
   cmat_t* m3;
   int err;
 
-  cmat_new2(v, 2, 3, &m1);
-  cmat_new2(v, 2, 3, &m2);
+  cmat_new(v, 2, 3, &m1);
+  cmat_new(v, 2, 3, &m2);
 
   err = cmat_product(m1, m2, &m3);
   cmat_destroy(m1);

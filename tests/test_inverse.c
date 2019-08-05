@@ -10,7 +10,7 @@
 static int
 create_matrix(const matrix_info_t* info, cmat_t** dst)
 {
-  return cmat_new2(info->val, info->size, info->size, dst);
+  return cmat_new(info->val, info->size, info->size, dst);
 }
 
 static void
@@ -31,7 +31,7 @@ check_matrix(cmat_t* org, cmat_t* inv, const matrix_info_t* info)
   cmat_check(inv, info->val, &res1);
 
   /* check matrix product result */
-  cmat_new(n, &im);
+  cmat_new(NULL, 0, n, &im);
   row = (double*)malloc(sizeof(double) * n);
 
   for (i = 0; i < n; i++) {
@@ -40,6 +40,8 @@ check_matrix(cmat_t* org, cmat_t* inv, const matrix_info_t* info)
 
     cmat_append(im, row);
   }
+
+  free(row);
 
   cmat_product(org, inv, &cm);
   cmat_compare(im, cm, &res2);
@@ -68,12 +70,12 @@ test_normal_1(void)
     CU_ASSERT(err == 0);
 
 #if 0
-    printf("\n");
+    printf("#%d\n", i);
     cmat_print(m1, NULL);
+
     printf("\n");
     cmat_print(m2, NULL);
     printf("\n");
-    cmat_print(m3, NULL);
 #endif
 
     check_matrix(m1, m2, &data[i].ans);
@@ -139,7 +141,7 @@ test_error_2(void)
 
   cmat_t* m;
 
-  cmat_new2(v, 2, 3, &m);
+  cmat_new(v, 2, 3, &m);
 
   err = cmat_inverse(m, NULL);
   cmat_destroy(m);

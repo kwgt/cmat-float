@@ -11,7 +11,7 @@ test_normal_1(void)
 
   cmat_t* m;
 
-  cmat_new(10, &m);
+  cmat_new(NULL, 10, 10, &m);
 
   err = cmat_destroy(m);
 
@@ -28,7 +28,7 @@ test_normal_2(void)
     4, 5, 6,
   };
 
-  cmat_new2(v, 2, 3, &m);
+  cmat_new(v, 2, 3, &m);
 
   err = cmat_destroy(m);
 

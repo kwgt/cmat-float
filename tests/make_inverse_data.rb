@@ -1,12 +1,26 @@
 require 'matrix'
 
-def print_c_source(m)
+def print_c_source1(m)
   print "    {\n"
   print "      #{m.row_size},\n"
   print "      (double[]) {\n"
 
   m.to_a.each {|row|
-    tmp = row.inject([]) {|m, n| m << ("% 14.10f" % n)}
+    tmp = row.inject([]) {|m, n| m << ("% 4d" % n)}
+    print "        #{tmp.join(",")},\n"
+  }
+
+  print "      },\n"
+  print "    },\n"
+end
+
+def print_c_source2(m)
+  print "    {\n"
+  print "      #{m.row_size},\n"
+  print "      (double[]) {\n"
+
+  m.to_a.each {|row|
+    tmp = row.inject([]) {|m, n| m << ("% 34.30f" % n)}
     print "        #{tmp.join(",")},\n"
   }
 
@@ -26,7 +40,7 @@ print <<~EOT
   } data[] = {
 EOT
 
-100.times {
+2000.times {
 
   begin
     n  = rand(15) + 1
@@ -36,8 +50,8 @@ EOT
   ans = op.inverse
 
   print "  {\n"
-  print_c_source(op)
-  print_c_source(ans)
+  print_c_source1(op)
+  print_c_source2(ans)
   print "  },\n"
 }
 

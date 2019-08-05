@@ -9,7 +9,7 @@
 static int
 create_matrix(const matrix_info_t* info, cmat_t** dst)
 {
-  return cmat_new2(info->val, info->rows, info->cols, dst);
+  return cmat_new(info->val, info->rows, info->cols, dst);
 }
 
 static void
@@ -30,12 +30,14 @@ test_normal_1(void)
   cmat_t* m2;
   cmat_t* m3;
   int i;
+  int err;
 
   for (i = 0; i < N(data); i++) {
     create_matrix(&data[i].op1, &m1);
     create_matrix(&data[i].op2, &m2);
 
-    cmat_sub(m1, m2, &m3);
+    err = cmat_sub(m1, m2, &m3);
+    CU_ASSERT(err == 0);
 
 #if 0
     printf("\n");
@@ -60,6 +62,7 @@ test_normal_2(void)
   cmat_t* m1;
   cmat_t* m2;
   int i;
+  int err;
 
   for (i = 0; i < N(data); i++) {
     create_matrix(&data[i].op1, &m1);
@@ -72,7 +75,8 @@ test_normal_2(void)
     cmat_print(m2, NULL);
 #endif
 
-    cmat_sub(m1, m2, NULL);
+    err = cmat_sub(m1, m2, NULL);
+    CU_ASSERT(err == 0);
 
 #if 0
     printf("\n");
@@ -97,7 +101,7 @@ test_error_1(void)
     3, 4
   };
 
-  cmat_new2(v, 2, 2, &m);
+  cmat_new(v, 2, 2, &m);
 
   err = cmat_sub(m, NULL, NULL);
   
@@ -117,7 +121,7 @@ test_error_2(void)
     3, 4
   };
 
-  cmat_new2(v, 2, 2, &m);
+  cmat_new(v, 2, 2, &m);
 
   err = cmat_sub(NULL, m, NULL);
   

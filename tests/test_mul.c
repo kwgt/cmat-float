@@ -9,7 +9,7 @@
 static int
 create_matrix(const matrix_info_t* info, cmat_t** dst)
 {
-  return cmat_new2(info->val, info->rows, info->cols, dst);
+  return cmat_new(info->val, info->rows, info->cols, dst);
 }
 
 static void
@@ -29,11 +29,13 @@ test_normal_1(void)
   cmat_t* m1;
   cmat_t* m2;
   int i;
+  int err;
 
   for (i = 0; i < N(data); i++) {
     create_matrix(&data[i].op1, &m1);
 
-    cmat_mul(m1, data[i].op2, &m2);
+    err = cmat_mul(m1, data[i].op2, &m2);
+    CU_ASSERT(err == 0);
 
 #if 0
     printf("\n");
@@ -56,6 +58,7 @@ test_normal_2(void)
 {
   cmat_t* m1;
   int i;
+  int err;
 
   for (i = 0; i < N(data); i++) {
     create_matrix(&data[i].op1, &m1);
@@ -67,7 +70,8 @@ test_normal_2(void)
     cmat_print(m2, NULL);
 #endif
 
-    cmat_mul(m1, data[i].op2, NULL);
+    err = cmat_mul(m1, data[i].op2, NULL);
+    CU_ASSERT(err == 0);
 
 #if 0
     printf("\n");

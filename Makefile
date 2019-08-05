@@ -1,5 +1,5 @@
 CFLAGS    += -O0 -g -I./include
-LDFLAGS   += -O0 -g -L./lib -lcunit
+LDFLAGS   += -g -L./lib -lcunit
 
 CSRC      := src/cmat.c
 OBJS      := $(patsubst %.c,%.o, $(CSRC))

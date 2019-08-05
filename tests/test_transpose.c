@@ -9,7 +9,7 @@
 static int
 create_matrix(const matrix_info_t* info, cmat_t** dst)
 {
-  return cmat_new2(info->val, info->rows, info->cols, dst);
+  return cmat_new(info->val, info->rows, info->cols, dst);
 }
 
 static void

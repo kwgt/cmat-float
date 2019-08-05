@@ -9,7 +9,7 @@
 static int
 create_matrix(const matrix_info_t* info, cmat_t** dst)
 {
-  return cmat_new2(info->val, info->rows, info->cols, dst);
+  return cmat_new(info->val, info->rows, info->cols, dst);
 }
 
 static void
@@ -97,8 +97,8 @@ test_error_3(void)
   double dot;
   int err;
 
-  cmat_new2(v1, 2, 2, &m1);
-  cmat_new2(v1, 2, 3, &m2);
+  cmat_new(v1, 2, 2, &m1);
+  cmat_new(v1, 2, 3, &m2);
 
   err = cmat_dot(m1, m2, &dot);
   cmat_destroy(m1);

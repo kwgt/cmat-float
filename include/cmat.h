@@ -8,7 +8,7 @@
 #define __CHEAP_MATRIX_H__
 
 typedef struct {
-  double** tbl;
+  double* tbl;
   int rows;
   int cols;
 
@@ -22,8 +22,7 @@ typedef struct {
 #define CMAT_ERR_INVAL      -4
 #define CMAT_ERR_SHAPE      -5
 
-int cmat_new(int n, cmat_t** dst);
-int cmat_new2(double* src, int rows, int cols, cmat_t** dst);
+int cmat_new(double* src, int rows, int cols, cmat_t** dst);
 int cmat_destroy(cmat_t* dst);
 int cmat_append(cmat_t* ptr, double* r);
 

@@ -4,6 +4,7 @@ LDFLAGS   += -g -L../lib -lcmat -lcunit
 CSRC      := main.c \
              test_new.c \
              test_destroy.c \
+             test_append.c \
              test_add.c \
              test_sub.c \
              test_mul.c \
@@ -14,6 +15,15 @@ CSRC      := main.c \
              test_transpose.c
 
 OBJS      := $(patsubst %.c,%.o, $(CSRC))
+
+HEADERS   := test_add.h \
+             test_sub.h \
+             test_mul.h \
+             test_product.h \
+             test_transpose.h \
+             test_det.h \
+             test_dot.h \
+             test_inverse.h
 
 TARGET    := test_all
 
@@ -27,6 +37,7 @@ tt: tt.c
 
 test_new.o : test_new.c
 test_destroy.o : test_destroy.c
+test_append.o : test_append.c
 test_add.o : test_add.c test_add.h
 test_sub.o : test_sub.c test_sub.h
 test_mul.o : test_mul.c test_mul.h
@@ -62,6 +73,8 @@ test_dot.h:
 
 test_inverse.h:
 	ruby make_inverse_data.rb > $@
+
+data: $(HEADERS)
 
 clean:
 	rm -f $(TARGET) $(OBJS)
