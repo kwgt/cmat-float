@@ -3,6 +3,7 @@ LDFLAGS   += -g -L../lib -lcmat -lcunit
 
 CSRC      := main.c \
              test_new.c \
+             test_clone.c \
              test_destroy.c \
              test_append.c \
              test_add.c \
@@ -12,7 +13,10 @@ CSRC      := main.c \
              test_det.c \
              test_dot.c \
              test_inverse.c \
-             test_transpose.c
+             test_transpose.c \
+             test_lu_decomp.c \
+	     test_permute_row.c \
+	     test_permute_column.c
 
 OBJS      := $(patsubst %.c,%.o, $(CSRC))
 
@@ -23,19 +27,21 @@ HEADERS   := test_add.h \
              test_transpose.h \
              test_det.h \
              test_dot.h \
-             test_inverse.h
+             test_inverse.h \
+             test_lu_decomp.h
 
 TARGET    := test_all
 
 all: $(TARGET)
 
-$(TARGET): $(OBJS)
+$(TARGET): $(OBJS) ../lib/libcmat.a
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 tt: tt.c
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 test_new.o : test_new.c
+test_clone.o : test_clone.c
 test_destroy.o : test_destroy.c
 test_append.o : test_append.c
 test_add.o : test_add.c test_add.h
@@ -46,6 +52,9 @@ test_transpose.o : test_transpose.c test_transpose.h
 test_det.o : test_det.c test_det.h
 test_dot.o : test_dot.c test_dot.h
 test_inverse.o : test_inverse.c test_inverse.h
+test_lu_decomp.o : test_lu_decomp.c test_lu_decomp.h
+test_permute_row.o: test_permute_row.c
+test_permute_column.o: test_permute_column.c
 
 test: $(TARGET)
 	./$(TARGET)
@@ -73,6 +82,9 @@ test_dot.h:
 
 test_inverse.h:
 	ruby make_inverse_data.rb > $@
+
+test_lu_decomp.h:
+	ruby make_lu_decomp_data.rb > $@
 
 data: $(HEADERS)
 

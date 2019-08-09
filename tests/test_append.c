@@ -100,8 +100,8 @@ init_test_append()
   CU_pSuite suite;
 
   suite = CU_add_suite("append row", NULL, NULL);
-  CU_add_test(suite, "new#1", test_normal_1);
-  CU_add_test(suite, "new#2", test_normal_2);
-  CU_add_test(suite, "new#E1", test_error_1);
-  CU_add_test(suite, "new#E2", test_error_2);
+  CU_add_test(suite, "append#1", test_normal_1);
+  CU_add_test(suite, "append#2", test_normal_2);
+  CU_add_test(suite, "append#E1", test_error_1);
+  CU_add_test(suite, "append#E2", test_error_2);
 }

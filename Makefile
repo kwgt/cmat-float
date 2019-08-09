@@ -1,4 +1,4 @@
-CFLAGS    += -O0 -g -I./include
+CFLAGS    += -O0 -g -I./include -DDEBUG
 LDFLAGS   += -g -L./lib -lcunit
 
 CSRC      := src/cmat.c
@@ -15,11 +15,9 @@ $(TARGET): $(OBJS)
 
 src/cmat.c: include/cmat.h
 
-tests/test_all: $(TARGET)
-	make -C tests $(@F)
 
-test: tests/test_all
-	./$<
+test:
+	make -C tests
 
 clean:
 	make -C tests $@
