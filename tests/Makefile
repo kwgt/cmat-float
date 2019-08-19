@@ -1,4 +1,4 @@
-CFLAGS    += -g -I../include -I.
+CFLAGS    += -O3 -g -I../include -I.
 LDFLAGS   += -g -L../lib -lcmat -lcunit
 
 CSRC      := main.c \
@@ -37,8 +37,12 @@ all: $(TARGET)
 $(TARGET): $(OBJS) ../lib/libcmat.a
 	$(CC) -o $@ $^ $(LDFLAGS)
 
+benchmark: benchmark.c ../lib/libcmat.a
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
 tt: tt.c
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
 
 test_new.o : test_new.c
 test_clone.o : test_clone.c
@@ -89,7 +93,7 @@ test_lu_decomp.h:
 data: $(HEADERS)
 
 clean:
-	rm -f $(TARGET) $(OBJS)
+	rm -f $(TARGET) $(OBJS) benchmark
 
 clean-data:
 	rm test_*.h
