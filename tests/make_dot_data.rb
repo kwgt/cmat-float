@@ -25,7 +25,7 @@ def print_c_source(m)
   print "    {\n"
   print "      #{m.row_size},\n"
   print "      #{m.row(0).size},\n"
-  print "      (double[]) {\n"
+  print "      (float[]) {\n"
 
   m.to_a.each {|row|
     tmp = row.inject([]) {|m, n| m << ("% 3d" % n)}
@@ -40,13 +40,13 @@ print <<~EOT
   typedef struct {
     int rows;
     int cols;
-    double* val;
+    float* val;
   } matrix_info_t;
 
   static struct {
     matrix_info_t op1;
     matrix_info_t op2;
-    double ans;
+    float ans;
   } data[] = {
 EOT
 

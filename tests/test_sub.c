@@ -96,7 +96,7 @@ test_error_1(void)
   int err;
   cmat_t* m;
 
-  double v[] = {
+  float v[] = {
     1, 2,
     3, 4
   };
@@ -116,7 +116,7 @@ test_error_2(void)
   int err;
   cmat_t* m;
 
-  double v[] = {
+  float v[] = {
     1, 2,
     3, 4
   };

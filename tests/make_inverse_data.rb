@@ -3,7 +3,7 @@ require 'matrix'
 def print_c_source1(m)
   print "    {\n"
   print "      #{m.row_size},\n"
-  print "      (double[]) {\n"
+  print "      (float[]) {\n"
 
   m.to_a.each {|row|
     tmp = row.inject([]) {|m, n| m << ("% 4d" % n)}
@@ -17,7 +17,7 @@ end
 def print_c_source2(m)
   print "    {\n"
   print "      #{m.row_size},\n"
-  print "      (double[]) {\n"
+  print "      (float[]) {\n"
 
   m.to_a.each {|row|
     tmp = row.inject([]) {|m, n| m << ("% 34.30f" % n)}
@@ -31,7 +31,7 @@ end
 print <<~EOT
   typedef struct {
     int size;
-    double* val;
+    float* val;
   } matrix_info_t;
 
   static struct {

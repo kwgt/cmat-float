@@ -9,8 +9,8 @@ test_normal_1(void)
   int err;
   cmat_t* m;
 
-  double r1[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  double r2[] = {10, 9, 8, 7, 6, 5, 4, 3, 2, 1};
+  float r1[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  float r2[] = {10, 9, 8, 7, 6, 5, 4, 3, 2, 1};
 
   m = NULL;
 
@@ -40,12 +40,12 @@ test_normal_2(void)
 {
   int err;
   cmat_t* m;
-  double v[] = {
+  float v[] = {
     1, 2, 3,
     4, 5, 6,
   };
-  double r1[] = { 7,  8,  9};
-  double r2[] = {10, 11, 12};
+  float r1[] = { 7,  8,  9};
+  float r2[] = {10, 11, 12};
 
   m = NULL;
 
@@ -76,7 +76,7 @@ static void
 test_error_1(void)
 {
   int err;
-  double r[] = {1, 2, 3};
+  float r[] = {1, 2, 3};
 
   err = cmat_append(NULL, r);
   CU_ASSERT(err == CMAT_ERR_BADDR);

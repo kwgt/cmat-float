@@ -17,7 +17,7 @@ test_normal_1(void)
   int piv[4] = {3, 2, 1, 0};
 
   {
-    double v[] = {
+    float v[] = {
       1, 1, 1, 1,
       2, 2, 2, 2,
       3, 3, 3, 3,
@@ -41,7 +41,7 @@ test_normal_1(void)
 #endif
 
   {
-    double v[] = {
+    float v[] = {
       4, 4, 4, 4,
       3, 3, 3, 3,
       2, 2, 2, 2,
@@ -70,7 +70,7 @@ test_normal_2(void)
   int piv[4] = {1, 3, 2, 0};
 
   {
-    double v[] = {
+    float v[] = {
       1, 1, 1, 1,
       2, 2, 2, 2,
       3, 3, 3, 3,
@@ -94,7 +94,7 @@ test_normal_2(void)
 #endif
 
   {
-    double v[] = {
+    float v[] = {
       4, 4, 4, 4,
       1, 1, 1, 1,
       3, 3, 3, 3,
@@ -132,7 +132,7 @@ test_error_2(void)
   int res;
 
   {
-    double v[] = {
+    float v[] = {
       1, 1, 1, 1,
       2, 2, 2, 2,
       3, 3, 3, 3,
@@ -156,7 +156,7 @@ test_error_3(void)
   int res;
 
   {
-    double v[] = {
+    float v[] = {
       1, 1, 1, 1,
       2, 2, 2, 2,
       3, 3, 3, 3,

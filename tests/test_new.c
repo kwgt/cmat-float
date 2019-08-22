@@ -31,7 +31,7 @@ test_normal_2(void)
 {
   int err;
   cmat_t* m;
-  double v[] = {
+  float v[] = {
     1, 2, 3,
     4, 5, 6,
   };
@@ -84,7 +84,7 @@ test_error_e1(void)
 {
   int err;
   cmat_t* m;
-  double v[] = {
+  float v[] = {
     1, 2, 3,
     4, 5, 6,
   };
@@ -98,7 +98,7 @@ test_error_e2(void)
 {
   int err;
   cmat_t* m;
-  double v[] = {
+  float v[] = {
     1, 2, 3,
     4, 5, 6,
   };
@@ -112,7 +112,7 @@ test_error_e3(void)
 {
   int err;
   cmat_t* m;
-  double v[] = {
+  float v[] = {
     1, 2, 3,
     4, 5, 6,
   };

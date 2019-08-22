@@ -117,7 +117,7 @@ test_error_2(void)
 static void
 test_error_3(void)
 {
-  double v[] = {
+  float v[] = {
     1, 2, 3,
     4, 5, 6,
   };

@@ -14,14 +14,14 @@ create_matrix(const matrix_info_t* info, cmat_t** dst)
 }
 
 static void
-check_det(double a, double b)
+check_det(float a, float b)
 {
   int s1;
-  double v1;
+  float v1;
   int e1;
 
   int s2;
-  double v2;
+  float v2;
   int e2;
 
   s1 = signbit(a);
@@ -35,14 +35,14 @@ check_det(double a, double b)
 
   CU_ASSERT(s1 == s2);                  // 符号の一致を確認
   CU_ASSERT(e1 == e2);                  // 指数の一致を確認
-  CU_ASSERT(fabs(v1 - v2) < 1e-10);     // 仮数の差が範囲内であることを確認
+  CU_ASSERT(fabs(v1 - v2) < 1e-5);      // 仮数の差が範囲内であることを確認
 }
 
 static void
 test_normal_1(void)
 {
   cmat_t* m1;
-  double det;
+  float det;
   int i;
 
   for (i = 0; i < N(data); i++) {
@@ -68,7 +68,7 @@ test_normal_1(void)
 static void
 test_error_1(void)
 {
-  double det;
+  float det;
   int err;
 
   det = NAN;

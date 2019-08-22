@@ -1,2 +1,2 @@
 # cmat
-A Cheaper matrix library for C.
+A Cheaper matrix library float edition for C.

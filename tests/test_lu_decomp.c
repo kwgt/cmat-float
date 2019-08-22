@@ -121,7 +121,7 @@ test_normal_2(void)
   int j;
   int k;
   int sz;
-  double* val;
+  float* val;
   int res;
   int piv[20];
 
@@ -222,7 +222,7 @@ static void
 test_error_2(void)
 {
   int err;
-  double v[] = {
+  float v[] = {
     1, 2, 3,
     4, 5, 6
   };

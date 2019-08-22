@@ -95,10 +95,10 @@ void
 bench_det(tmmes_t* tm)
 {
   cmat_t* m;
-  double det;
+  float det;
   int i;
   int j;
-  double* row;
+  float* row;
 
   cmat_new(NULL, 100, 100, &m);
 
@@ -107,7 +107,7 @@ bench_det(tmmes_t* tm)
     row = CMAT_ROW(m, i);
 
     for (j = 0; j < 100; j++) {
-      row[j] = (double)rand() / RAND_MAX;
+      row[j] = (float)rand() / RAND_MAX;
     }
   }
 

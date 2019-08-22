@@ -18,7 +18,7 @@ test_normal_1(void)
   int err;
   cmat_t* m1;
   cmat_t* m2;
-  double dot;
+  float dot;
   int i;
 
   for (i = 0; i < N(data); i++) {
@@ -49,7 +49,7 @@ test_error_1(void)
 {
   int err;
   cmat_t* m;
-  double dot;
+  float dot;
   int i;
 
   create_matrix(&data[0].op1, &m);
@@ -65,7 +65,7 @@ test_error_2(void)
 {
   cmat_t* m1;
   cmat_t* m2;
-  double dot;
+  float dot;
   int err;
 
   create_matrix(&data[0].op1, &m1);
@@ -81,20 +81,20 @@ test_error_2(void)
 static void
 test_error_3(void)
 {
-  double v1[] = {
+  float v1[] = {
     1, 2,
     3, 4
   };
 
   cmat_t* m1;
 
-  double v2[] = {
+  float v2[] = {
     1, 2, 3,
     4, 5, 6
   };
 
   cmat_t* m2;
-  double dot;
+  float dot;
   int err;
 
   cmat_new(v1, 2, 2, &m1);

@@ -1,5 +1,5 @@
-CFLAGS    += -O3 -g -I../include -I.
-LDFLAGS   += -g -L../lib -lcmat -lcunit
+CFLAGS    += -O0 -g -I../include -I.
+LDFLAGS   += -g -L../lib -lcmat -lcunit -lm
 
 CSRC      := main.c \
              test_new.c \

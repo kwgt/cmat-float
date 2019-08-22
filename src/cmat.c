@@ -8,11 +8,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <float.h>
 
 #include "cmat.h"
 
 #define DEFAULT_ERROR       __LINE__
-#define DEFAULT_CUTOFF      1e-10
+#define DEFAULT_CUTOFF      1e-4
 
 #define GROW(n)             ((n * 13) / 10)
 #define SHRINK(n)           ((n * 10) / 13)
@@ -22,8 +23,8 @@ static int
 alloc_object(int rows, int cols, cmat_t* org, cmat_t** dst)
 {
   int ret;
-  double* tbl;
-  double** row;
+  float* tbl;
+  float** row;
   cmat_t* obj;
   int i;
 
@@ -46,13 +47,13 @@ alloc_object(int rows, int cols, cmat_t* org, cmat_t** dst)
     }
 
     if (rows > 0) {
-      tbl = (double*)malloc(sizeof(double) * rows * cols);
+      tbl = (float*)malloc(sizeof(float) * rows * cols);
       if (tbl == NULL) {
         ret = CMAT_ERR_NOMEM;
         break;
       }
 
-      row = (double**)malloc(sizeof(double*) * rows);
+      row = (float**)malloc(sizeof(float*) * rows);
       if (row == NULL) {
         ret = CMAT_ERR_NOMEM;
         break;
@@ -114,11 +115,11 @@ replace_object(cmat_t* ptr, cmat_t** src)
 }
 
 static int
-alloc_table(double** src, int rows, int cols, double** dt, double*** dr)
+alloc_table(float** src, int rows, int cols, float** dt, float*** dr)
 {
   int ret;
-  double* tbl;
-  double** row;
+  float* tbl;
+  float** row;
   int i;
 
   ret = 0;
@@ -126,13 +127,13 @@ alloc_table(double** src, int rows, int cols, double** dt, double*** dr)
   row = NULL;
 
   do {
-    tbl = (double*)malloc(sizeof(double) * rows * cols);
+    tbl = (float*)malloc(sizeof(float) * rows * cols);
     if (tbl == NULL) {
       ret = CMAT_ERR_NOMEM;
       break;
     }
 
-    row = (double**)malloc(sizeof(double) * rows);
+    row = (float**)malloc(sizeof(float*) * rows);
     if (row == NULL) {
       ret = CMAT_ERR_NOMEM;
       break;
@@ -142,7 +143,7 @@ alloc_table(double** src, int rows, int cols, double** dt, double*** dr)
   if (!ret) {
     for (i = 0; i < rows; i++) {
       row[i] = tbl + (i * cols);
-      if (src) memcpy(row[i], src[i], sizeof(double) * cols);
+      if (src) memcpy(row[i], src[i], sizeof(float) * cols);
     }
 
     *dt = tbl;
@@ -158,12 +159,12 @@ alloc_table(double** src, int rows, int cols, double** dt, double*** dr)
 }
 
 static int
-format(double val, char* dst, double thr)
+format(float val, char* dst, float thr)
 {
   int ret;
   int i;
 
-  if (fabs(val) > thr) {
+  if (fabsf(val) > thr) {
     sprintf(dst, "% f", val);
 
     for (i = strlen(dst) - 1; i > 0; i--) {
@@ -193,50 +194,58 @@ format(double val, char* dst, double thr)
 }
 
 static inline int
-fcmp(double a, double b, double coff)
+fcmp(float f1, float f2, float coff)
 {
-  int ret;
+  /*
+   * 絶対的な誤差ではなく、有効桁を意識した比較を行うために
+   * 若干複雑な比較を行っているので注意。
+   *
+   * 例えば、非常に大きな値同士の比較などの場合
+   * この場合差が大きくとも誤差が有効桁に収まっている場合は、
+   * 同値として扱うことが妥当となる。単純に差分を基準値と比
+   * 較するだけでは対応できない。
+   *
+   * なお、現在の実装でも完全ではないのでいずれ修正すること。
+   */
 
-  double v1;
+  float v1;
   int e1;
 
-  double v2;
+  float v2;
   int e2;
 
-  do {
-    ret = !0;
+  v1 = frexpf(f1, &e1);
+  v2 = frexpf(f2, &e2);
 
-    v1  = frexp(a, &e1);
-    v2  = frexp(b, &e2);
+  if (e1 == e2) {
+    f1 = v1;
+    f2 = v2;
+  }
 
-    if (e1 != e2) {
-      v1 = a;
-      v2 = b;
-    }
+#if 0
+  if (fabsf(f1 - f2) > coff) {
+    printf("%.20f %.20f %.20g\n", f1, f2, fabsf(f1 - f2));
+  }
+#endif
 
-    if (fabs(v1 - v2) > coff) break;
-
-    ret = 0;
-  } while (0);
-
-  return ret;
+  return fabsf(f1 - f2) > coff;
 }
 
 /*
  * http://hooktail.org/computer/index.php?LU%CA%AC%B2%F2
  */
 static int
-lu_decomp(double** row, int sz, double thr, int* piv)
+lu_decomp(float** row, int sz, float thr, int* piv)
 {
   int ret;
   int i;
   int j;
   int k;
-  double max;
-  double tmp;
+  float max;
+  float tmp;
 
-  double* pi;
-  double* pj;
+  float* pi;
+  float* pj;
 
   ret = 0;
 
@@ -246,12 +255,12 @@ lu_decomp(double** row, int sz, double thr, int* piv)
 
   for (i = 0; i < sz; i++) {
     pi  = row[i];
-    max = fabs(pi[i]);
+    max = fabsf(pi[i]);
     k   = i;
 
     /* 注目行以降で最大の値（絶対値）の存在する行を探す */
     for (j = i + 1; j < sz; j++) {
-      tmp = fabs(row[j][i]);
+      tmp = fabsf(row[j][i]);
 
       /*
        * 浮動小数点数の丸め誤差の蓄積のため、極小差の場合に大小比較がうまくい
@@ -266,7 +275,7 @@ lu_decomp(double** row, int sz, double thr, int* piv)
 
     /* 注目行と最大値のあった行を入れ替える */
     if (k != i) {
-      SWAP(row[i], row[k], double*);
+      SWAP(row[i], row[k], float*);
       if (piv) SWAP(piv[i], piv[k], int);
 
       pi = row[i];
@@ -291,22 +300,22 @@ lu_decomp(double** row, int sz, double thr, int* piv)
   return ret;
 }
 
-static double
-det(double a, double b, double c, double d)
+static float
+det(float a, float b, float c, float d)
 {
   return (a * d) - (b * c);
 }
 
-static double
-calc_det_dim2(double* r1, double* r2)
+static float
+calc_det_dim2(float* r1, float* r2)
 {
   return det(r1[0], r1[1], r2[0], r2[1]);
 }
 
-static double
-calc_det_dim3(double* r1, double* r2, double* r3)
+static float
+calc_det_dim3(float* r1, float* r2, float* r3)
 {
-  double ret;
+  float ret;
 
   ret = (r1[0] * det(r2[1], r2[2], r3[1], r3[2])) -
         (r2[0] * det(r1[1], r1[2], r3[1], r3[2])) +
@@ -316,18 +325,20 @@ calc_det_dim3(double* r1, double* r2, double* r3)
 }
 
 static int
-calc_det(double** row, int sz, double thr, double* dst)
+calc_det(float** row, int sz, float thr, float* dst)
 {
   int ret;
-  double* wt;   // as "Work Table"
-  double** wr;   // as "Work Rows"
-  double det;
+  float* wt;   // as "Work Table"
+  float** wr;   // as "Work Rows"
+  float det;
   int i;
   int j;
   int n;
 
   do {
     ret = 0;
+    wt  = NULL;
+    wr  = NULL;
 
     /* alloc work buffer */
     ret = alloc_table(row, sz, sz, &wt, &wr);
@@ -352,23 +363,23 @@ calc_det(double** row, int sz, double thr, double* dst)
 }
 
 static void
-calc_inverse(double** src, int n, double** dst)
+calc_inverse(float** src, int n, float** dst)
 {
   int i;
   int j;
   int k;
 
-  double max;
-  double tmp;
+  float max;
+  float tmp;
 
-  double* si;
-  double* sj;
-  double* di;
-  double* dj;
+  float* si;
+  float* sj;
+  float* di;
+  float* dj;
 
   /* create identity matrix */
   for (i = 0; i < n; i++) {
-    memset(dst[i], 0, sizeof(double) * n);
+    memset(dst[i], 0, sizeof(float) * n);
     dst[i][i] = 1.0;
   }
 
@@ -377,13 +388,13 @@ calc_inverse(double** src, int n, double** dst)
     si  = src[i];
     di  = dst[i];
 
-    max = fabs(si[i]);
+    max = fabsf(si[i]);
     k   = i;
 
     /* ピボット操作 */
     // 注目行以降で最大の値（絶対値）の存在する行を探す
     for (j = i + 1; j < n; j++) {
-      tmp = fabs(src[j][i]);
+      tmp = fabsf(src[j][i]);
 
       if (tmp > max) {
         max = tmp;
@@ -393,8 +404,8 @@ calc_inverse(double** src, int n, double** dst)
 
     // 注目行と最大値のあった行を入れ替える
     if (i != k) {
-      SWAP(src[i], src[k], double*);
-      SWAP(dst[i], dst[k], double*);
+      SWAP(src[i], src[k], float*);
+      SWAP(dst[i], dst[k], float*);
 
       si = src[i];
       di = dst[i];
@@ -467,7 +478,7 @@ sort(int* a, size_t n)
  * @return エラーコード(0で正常終了)
  */
 int
-cmat_new(double* src, int rows, int cols, cmat_t** dst)
+cmat_new(float* src, int rows, int cols, cmat_t** dst)
 {
   int ret;
   cmat_t* obj;
@@ -510,9 +521,9 @@ cmat_new(double* src, int rows, int cols, cmat_t** dst)
    */
   if (!ret) {
     if (src) {
-      memcpy(obj->tbl, src, sizeof(double) * rows * cols);
+      memcpy(obj->tbl, src, sizeof(float) * rows * cols);
     } else {
-      memset(obj->tbl, 0, sizeof(double) * rows * cols);
+      memset(obj->tbl, 0, sizeof(float) * rows * cols);
     }
   }
 
@@ -580,7 +591,7 @@ cmat_clone(cmat_t* ptr, cmat_t** dst)
    * copy values
    */
   if (!ret) {
-    memcpy(obj->tbl, ptr->tbl, sizeof(double) * ptr->rows * ptr->cols);
+    memcpy(obj->tbl, ptr->tbl, sizeof(float) * ptr->rows * ptr->cols);
 
     for (i = 0; i < ptr->rows; i ++) {
       obj->row[i] = obj->tbl + (ptr->row[i] - ptr->tbl);
@@ -643,7 +654,7 @@ cmat_print(cmat_t* ptr, char* label)
   int r;
   int c;
 
-  double* rp;   // as "Row Pointer"
+  float* rp;   // as "Row Pointer"
   char fmt[32];
   char str[32];
   int len;
@@ -712,11 +723,11 @@ cmat_print(cmat_t* ptr, char* label)
  * @return エラーコード(0で正常終了)
  */
 int
-cmat_append(cmat_t* ptr, double* src)
+cmat_append(cmat_t* ptr, float* src)
 {
   int ret;
-  double* tbl;
-  double** row;
+  float* tbl;
+  float** row;
   int capa;
   int i;
 
@@ -749,13 +760,13 @@ cmat_append(cmat_t* ptr, double* src)
     if (ptr->capa == ptr->rows) {
       capa = (ptr->capa < 10)? 10: GROW(ptr->capa);
 
-      tbl  = (double*)realloc(ptr->tbl, sizeof(double) * capa * ptr->cols);
+      tbl  = (float*)realloc(ptr->tbl, sizeof(float) * capa * ptr->cols);
       if (tbl == NULL) {
         ret = CMAT_ERR_NOMEM;
         break;
       }
 
-      row  = (double**)realloc(ptr->row, sizeof(double*) * capa);
+      row  = (float**)realloc(ptr->row, sizeof(float*) * capa);
       if (row == NULL) {
         ret = CMAT_ERR_NOMEM;
         break;
@@ -775,7 +786,7 @@ cmat_append(cmat_t* ptr, double* src)
    * update context
    */
   if (!ret) {
-    memcpy(ptr->row[ptr->rows++], src, sizeof(double) * ptr->cols);
+    memcpy(ptr->row[ptr->rows++], src, sizeof(float) * ptr->cols);
   }
 
   /*
@@ -808,9 +819,9 @@ cmat_add(cmat_t* ptr, cmat_t* op, cmat_t** dst)
   int r;
   int c;
 
-  double* d;
-  double* s;
-  double* o;
+  float* d;
+  float* s;
+  float* o;
 
   /*
    * initialize
@@ -902,9 +913,9 @@ cmat_sub(cmat_t* ptr, cmat_t* op, cmat_t** dst)
   int r;
   int c;
 
-  double* d;
-  double* s;
-  double* o;
+  float* d;
+  float* s;
+  float* o;
 
   /*
    * initialize
@@ -989,15 +1000,15 @@ cmat_sub(cmat_t* ptr, cmat_t* op, cmat_t** dst)
  * @return エラーコード(0で正常終了)
  */
 int
-cmat_mul(cmat_t* ptr, double op, cmat_t** dst)
+cmat_mul(cmat_t* ptr, float op, cmat_t** dst)
 {
   int ret;
   cmat_t* obj;
   int r;
   int c;
 
-  double* d;
-  double* s;
+  float* d;
+  float* s;
 
   /*
    * initialize
@@ -1082,8 +1093,8 @@ cmat_product(cmat_t* ptr, cmat_t* op, cmat_t** dst)
   int c;
   int i;
 
-  double* d;
-  double* s;
+  float* d;
+  float* s;
 
   /*
    * initialize
@@ -1178,7 +1189,7 @@ cmat_transpose(cmat_t* ptr, cmat_t** dst)
   int r;
   int c;
 
-  double* s;
+  float* s;
 
   /*
    * initialize
@@ -1252,14 +1263,14 @@ cmat_inverse(cmat_t* ptr, cmat_t** dst)
   int ret;
   cmat_t* obj;
 
-  double det;
+  float det;
   int i;
 
-  double* st;   // as "Source Table"
-  double** sr;  // as "Source Row"
+  float* st;   // as "Source Table"
+  float** sr;  // as "Source Row"
 
-  double* dt;   // as "Destination Table"
-  double** dr;  // as "destination Row"
+  float* dt;   // as "Destination Table"
+  float** dr;  // as "destination Row"
 
   /*
    * initialize
@@ -1284,7 +1295,7 @@ cmat_inverse(cmat_t* ptr, cmat_t** dst)
   }
 
   if (!ret) {
-    if (fabs(det) < ptr->coff) ret = CMAT_ERR_NREGL;
+    if (fabsf(det) < ptr->coff) ret = CMAT_ERR_NREGL;
   }
 
   /*
@@ -1302,7 +1313,7 @@ cmat_inverse(cmat_t* ptr, cmat_t** dst)
       ret = alloc_object(ptr->rows, ptr->cols, ptr, &obj);
       if (!ret) {
         for (i = 0; i < ptr->rows; i++) {
-          memcpy(sr[i], ptr->row[i], sizeof(double) * ptr->cols);
+          memcpy(sr[i], ptr->row[i], sizeof(float) * ptr->cols);
         }
 
         dt = obj->tbl;
@@ -1392,7 +1403,7 @@ cmat_lu_decomp(cmat_t* ptr, cmat_t** dst, int* piv)
 
   int i;
 
-  double** row;  // as "Source Row"
+  float** row;  // as "Source Row"
 
   /*
    * initialize
@@ -1414,7 +1425,7 @@ cmat_lu_decomp(cmat_t* ptr, cmat_t** dst, int* piv)
       ret = alloc_object(ptr->rows, ptr->cols, ptr, &obj);
       if (!ret) {
         for (i = 0; i < ptr->rows; i++) {
-          memcpy(obj->row[i], ptr->row[i], sizeof(double) * ptr->cols);
+          memcpy(obj->row[i], ptr->row[i], sizeof(float) * ptr->cols);
         }
 
         row = obj->row;
@@ -1461,10 +1472,10 @@ cmat_lu_decomp(cmat_t* ptr, cmat_t** dst, int* piv)
  * @return エラーコード(0で正常終了)
  */
 int
-cmat_det(cmat_t* ptr, double* dst)
+cmat_det(cmat_t* ptr, float* dst)
 {
   int ret;
-  double det;
+  float det;
 
   /*
    * initialize
@@ -1538,18 +1549,18 @@ cmat_det(cmat_t* ptr, double* dst)
  * @return エラーコード(0で正常終了)
  */
 int
-cmat_dot(cmat_t* ptr, cmat_t* op, double* dst)
+cmat_dot(cmat_t* ptr, cmat_t* op, float* dst)
 {
   int ret;
-  double dot;
+  float dot;
   int i;
   int n;
 
   int r1;
   int r2;
 
-  double* s;
-  double* o;
+  float* s;
+  float* o;
 
   /*
    * initialize
@@ -1611,6 +1622,136 @@ cmat_dot(cmat_t* ptr, cmat_t* op, double* dst)
 }
 
 #ifdef DEBUG
+/**
+ * 最大値の取得
+ *
+ * @param ptr  対象の行列オブジェクト
+ * @param dst  最大値を格納する領域
+ *
+ * @return エラーコード
+ *
+ * @note 本関数では絶対値で最大の値を探査する
+ */
+int
+cmat_abs_max(cmat_t* ptr, float* dst)
+{
+  int ret;
+  float max;
+  int r;
+  int c;
+  float* row;
+
+  /*
+   * initialize
+   */
+  ret = 0;
+  max = 0.0f;
+
+  /*
+   * argument check
+   */
+  do {
+    if (ptr == NULL) {
+      ret = CMAT_ERR_BADDR;
+      break;
+    }
+
+    if (dst == NULL) {
+      ret = CMAT_ERR_BADDR;
+      break;
+    }
+  } while (0);
+
+  /*
+   * lookup maximum value
+   */
+  if (!ret) {
+    for (r = 0; r < ptr->rows; r++) {
+      row = ptr->row[r];
+
+      for (c = 0; c < ptr->cols; c++) {
+        if (fabsf(row[c]) > fabsf(max)) max = row[c];
+      }
+    }
+  }
+
+  /*
+   * put return parameter
+   */
+  if (!ret) {
+    *dst = max;
+  }
+
+  return ret;
+}
+
+/**
+ * 最小値の取得
+ *
+ * @param ptr  対象の行列オブジェクト
+ * @param dst  最小値を格納する領域
+ *
+ * @return エラーコード
+ *
+ * @note 本関数では絶対値で最小の値を探査する
+ */
+int
+cmat_abs_min(cmat_t* ptr, float* dst)
+{
+  int ret;
+  float min;
+  int r;
+  int c;
+  float* row;
+
+  /*
+   * initialize
+   */
+  ret = 0;
+  min = FLT_MAX;
+
+  /*
+   * argument check
+   */
+  do {
+    if (ptr == NULL) {
+      ret = CMAT_ERR_BADDR;
+      break;
+    }
+
+    if (dst == NULL) {
+      ret = CMAT_ERR_BADDR;
+      break;
+    }
+  } while (0);
+
+  /*
+   * lookup minimum value
+   */
+  if (!ret) {
+    if (ptr->rows > 0 && ptr->cols > 0) {
+      for (r = 0; r < ptr->rows; r++) {
+        row = ptr->row[r];
+
+        for (c = 0; c < ptr->cols; c++) {
+          if (fabsf(row[c]) < fabsf(min)) min = row[c];
+        }
+      }
+    } else {
+      min = 0.0f;
+    }
+  }
+
+  /*
+   * put return parameter
+   */
+  if (!ret) {
+    *dst = min;
+  }
+
+  return ret;
+}
+
 /**
  * 行の置換
  *
@@ -1686,7 +1827,7 @@ cmat_permute_row(cmat_t* ptr, int* _piv)
       }
 
       if (r != i) {
-        SWAP(ptr->row[r], ptr->row[i], double*);
+        SWAP(ptr->row[r], ptr->row[i], float*);
         SWAP(piv[r], piv[i], int);
       }
     }
@@ -1717,7 +1858,7 @@ cmat_permute_column(cmat_t* ptr, int* _piv)
   int ret;
   int r;
   int* piv;
-  double* p;
+  float* p;
   int i;
   int j;
 
@@ -1778,7 +1919,7 @@ cmat_permute_column(cmat_t* ptr, int* _piv)
 
       if (r != i) {
         for (j = 0; j < ptr->rows; j++) {
-          SWAP(ptr->row[j][r], ptr->row[j][i], double);
+          SWAP(ptr->row[j][r], ptr->row[j][i], float);
         }
         SWAP(piv[r], piv[i], int);
       }
@@ -1810,8 +1951,8 @@ cmat_compare(cmat_t* ptr, cmat_t* op, int* dst)
   int res;
   int r;
   int c;
-  double* p;
-  double* o;
+  float* p;
+  float* o;
 
   /*
    * initialize
@@ -1882,14 +2023,14 @@ cmat_compare(cmat_t* ptr, cmat_t* op, int* dst)
  * @return エラーコード(0で正常終了)
  */
 int
-cmat_check(cmat_t* ptr, double* val, int* dst)
+cmat_check(cmat_t* ptr, float* val, int* dst)
 {
   int ret;
   int res;
   int r;
   int c;
 
-  double* p;
+  float* p;
 
   /*
    * initialize
@@ -1954,7 +2095,7 @@ cmat_check(cmat_t* ptr, double* val, int* dst)
  * @return エラーコード(0で正常終了)
  */
 int
-cmat_set_cutoff_threshold(cmat_t* ptr, double val)
+cmat_set_cutoff_threshold(cmat_t* ptr, float val)
 {
   int ret;
 
@@ -1972,7 +2113,7 @@ cmat_set_cutoff_threshold(cmat_t* ptr, double val)
    * update context
    */
   if (!ret) {
-    ptr->coff = fabs(val);
+    ptr->coff = fabsf(val);
   }
 
   return ret;

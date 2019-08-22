@@ -36,7 +36,7 @@ test_normal_2(void)
   int err;
   cmat_t* m1;
   cmat_t* m2;
-  double v[] = {
+  float v[] = {
     1, 2, 3,
     4, 5, 6,
   };
@@ -53,7 +53,7 @@ test_normal_2(void)
   if (m2 != NULL) {
     CU_ASSERT(m2->rows == m1->rows);
     CU_ASSERT(m2->cols == m1->cols);
-    CU_ASSERT(!memcmp(m1->tbl, m2->tbl, sizeof(double) * m2->rows * m2->cols));
+    CU_ASSERT(!memcmp(m1->tbl, m2->tbl, sizeof(float) * m2->rows * m2->cols));
   }
 
   cmat_destroy(m1);
@@ -75,7 +75,7 @@ test_error_e2(void)
 {
   int err;
   cmat_t* m;
-  double v[] = {
+  float v[] = {
     1, 2, 3,
     4, 5, 6,
   };

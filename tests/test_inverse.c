@@ -23,19 +23,35 @@ check_matrix(cmat_t* org, cmat_t* inv, const matrix_info_t* info)
   cmat_t* cm;
   int i;
   int n;
-  double* row;
+  float* row;
 
   n = info->size;
 
   /* check matrix values */
   cmat_check(inv, info->val, &res1);
 
+#if 0
+  if (res1) {
+    cmat_t* m;
+    cmat_t* d;
+    float max;
+
+    cmat_new(info->val, inv->rows, inv->cols, &m);
+    cmat_sub(inv, m, &d);
+    cmat_abs_max(d, &max);
+    printf("%.20f\n", max);
+
+    cmat_destroy(m);
+    cmat_destroy(d);
+  }
+#endif
+
   /* check matrix product result */
   cmat_new(NULL, 0, n, &im);
-  row = (double*)malloc(sizeof(double) * n);
+  row = (float*)malloc(sizeof(float) * n);
 
   for (i = 0; i < n; i++) {
-    memset(row, 0, sizeof(double) * n);
+    memset(row, 0, sizeof(float) * n);
     row[i] = 1.0;
 
     cmat_append(im, row);
@@ -134,7 +150,7 @@ static void
 test_error_2(void)
 {
   int err;
-  double v[] = {
+  float v[] = {
     1, 2, 3,
     4, 5, 6
   };
