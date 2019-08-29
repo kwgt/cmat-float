@@ -2,6 +2,7 @@ CFLAGS    += -g -I./include -DDEBUG
 
 CFLAGS    += -O3 -ftree-vectorize
 CFLAGS    += -DENABLE_NEON
+CFLAGS    += -fopenmp
 
 LDFLAGS   += -g -L./lib -lcunit
 
@@ -27,5 +28,7 @@ benchmark:
 	make -C tests benchmark
 
 clean:
-	make -C tests $@
 	rm -rf $(dir $(TARGET)) $(OBJS)
+
+clean-test:
+	make -C tests $@

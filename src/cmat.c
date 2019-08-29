@@ -343,6 +343,7 @@ lu_decomp(float** row, int sz, float thr, int* piv)
     if (pi[i] == 0.0) continue;
 
     /* forwarding erase */
+#pragma omp parallel for private(k,pj,tmp)
     for (j = i + 1; j < sz; j++) {
       pj  = row[j];
       tmp = (pj[i] /= pi[i]);
@@ -433,12 +434,6 @@ calc_inverse(float** src, int n, float** dst)
   float* di;
   float* dj;
 
-#ifdef ENABLE_NEON
-  float32x4_t vs;
-  float32x4_t vo;
-  float32x4_t vd;
-#endif /* defined(ENABLE_NEON) */
-
   /* create identity matrix */
   for (i = 0; i < n; i++) {
 #ifdef ENABLE_NEON
@@ -488,6 +483,7 @@ calc_inverse(float** src, int n, float** dst)
       di[j] *= tmp;
     }
 
+#pragma omp parallel for private(k,sj,dj,tmp)
     for (j = 0; j < n; j++) {
       if (i == j) continue;
 
@@ -979,12 +975,13 @@ cmat_add(cmat_t* ptr, cmat_t* op, cmat_t** dst)
    * do add operation
    */
   if (!ret) {
+#ifdef ENABLE_NEON
+#pragma omp parallel for private(s,o,d,c,vs,vo,vd)
     for (r = 0; r < ptr->rows; r++) {
       s = ptr->row[r];
       o = op->row[r];
       d = obj->row[r];
 
-#ifdef ENABLE_NEON
       for (c = 0; c < ptr->cols; c += 4) {
         vs = vld1q_f32(s);
         vo = vld1q_f32(o);
@@ -996,12 +993,19 @@ cmat_add(cmat_t* ptr, cmat_t* op, cmat_t** dst)
         o += 4;
         d += 4;
       }
+    }
 #else /* defined(ENABLE_NEON) */
+#pragma omp parallel for private(s,o,d,c)
+    for (r = 0; r < ptr->rows; r++) {
+      s = ptr->row[r];
+      o = op->row[r];
+      d = obj->row[r];
+
       for (c = 0; c < ptr->stride; c++) {
         d[c] = s[c] + o[c];
       }
-#endif /* defined(ENABLE_NEON) */
     }
+#endif /* defined(ENABLE_NEON) */
   }
 
   /*
@@ -1093,12 +1097,13 @@ cmat_sub(cmat_t* ptr, cmat_t* op, cmat_t** dst)
    * do add operation
    */
   if (!ret) {
+#ifdef ENABLE_NEON
+#pragma omp parallel for private(s,o,d,c,vs,vo,vd)
     for (r = 0; r < ptr->rows; r++) {
       s = ptr->row[r];
       o = op->row[r];
       d = obj->row[r];
 
-#ifdef ENABLE_NEON
       for (c = 0; c < ptr->cols; c += 4) {
         vs = vld1q_f32(s);
         vo = vld1q_f32(o);
@@ -1110,12 +1115,19 @@ cmat_sub(cmat_t* ptr, cmat_t* op, cmat_t** dst)
         o += 4;
         d += 4;
       }
+    }
 #else /* defined(ENABLE_NEON) */
+#pragma omp parallel for private(s,o,d,c)
+    for (r = 0; r < ptr->rows; r++) {
+      s = ptr->row[r];
+      o = op->row[r];
+      d = obj->row[r];
+
       for (c = 0; c < ptr->cols; c++) {
         d[c] = s[c] - o[c];
       }
-#endif /* defined(ENABLE_NEON) */
     }
+#endif /* defined(ENABLE_NEON) */
   }
 
   /*
@@ -1202,6 +1214,7 @@ cmat_mul(cmat_t* ptr, float op, cmat_t** dst)
 #ifdef ENABLE_NEON
     vo = vmovq_n_f32(op);
 
+#pragma omp parallel for private(s,d,c,vs,vd)
     for (r = 0; r < ptr->rows; r++) {
       s = ptr->row[r];
       d = obj->row[r];
@@ -1217,6 +1230,7 @@ cmat_mul(cmat_t* ptr, float op, cmat_t** dst)
       }
     }
 #else /* defined(ENABLE_NEON) */
+#pragma omp parallel for private(s,d,c)
     for (r = 0; r < ptr->rows; r++) {
       s = ptr->row[r];
       d = obj->row[r];
@@ -1322,6 +1336,7 @@ cmat_product(cmat_t* ptr, cmat_t* op, cmat_t** dst)
     o = op->row;
     d = obj->row;
 
+#pragma omp parallel for private(c,i,vs,vo,vd)
     for (r = 0; r < ptr->rows; r += 4) {
       for (c = 0; c < op->cols; c++) {
         // set 0 to destination
@@ -1349,6 +1364,7 @@ cmat_product(cmat_t* ptr, cmat_t* op, cmat_t** dst)
       }
     }
 #else /* defined(ENABLE_NEON) */
+#pragma omp parallel for private(c,i)
     for (r = 0; r < ptr->rows; r++) {
       s = ptr->row[r];
       d = obj->row[r];

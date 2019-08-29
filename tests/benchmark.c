@@ -9,13 +9,13 @@ typedef struct {
 } tmmes_t;
 
 void
-start_measure(tmmes_t* tm)
+start_timer(tmmes_t* tm)
 {
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &tm->t0);
 }
 
 void
-stop_measure(tmmes_t* tm)
+stop_timer(tmmes_t* tm)
 {
   struct timespec t1;
 
@@ -35,13 +35,13 @@ bench_add(tmmes_t* tm)
   cmat_new(NULL, 1000, 1000, &m1);
   cmat_new(NULL, 1000, 1000, &m2);
 
-  start_measure(tm);
+  start_timer(tm);
 
   for (i = 0; i < 200; i++) {
     cmat_add(m1, m2, NULL);
   }
 
-  stop_measure(tm);
+  stop_timer(tm);
 
   cmat_destroy(m1);
   cmat_destroy(m2);
@@ -57,13 +57,13 @@ bench_sub(tmmes_t* tm)
   cmat_new(NULL, 1000, 1000, &m1);
   cmat_new(NULL, 1000, 1000, &m2);
 
-  start_measure(tm);
+  start_timer(tm);
 
   for (i = 0; i < 200; i++) {
     cmat_sub(m1, m2, NULL);
   }
 
-  stop_measure(tm);
+  stop_timer(tm);
 
   cmat_destroy(m1);
   cmat_destroy(m2);
@@ -77,13 +77,13 @@ bench_mul(tmmes_t* tm)
 
   cmat_new(NULL, 1000, 1000, &m1);
 
-  start_measure(tm);
+  start_timer(tm);
 
   for (i = 0; i < 200; i++) {
     cmat_mul(m1, 2.0, NULL);
   }
 
-  stop_measure(tm);
+  stop_timer(tm);
 
   cmat_destroy(m1);
 }
@@ -98,13 +98,13 @@ bench_product(tmmes_t* tm)
   cmat_new(NULL, 100, 100, &m1);
   cmat_new(NULL, 100, 100, &m2);
 
-  start_measure(tm);
+  start_timer(tm);
 
   for (i = 0; i < 200; i++) {
     cmat_product(m1, m2, NULL);
   }
 
-  stop_measure(tm);
+  stop_timer(tm);
 
   cmat_destroy(m1);
   cmat_destroy(m2);
@@ -130,13 +130,13 @@ bench_det(tmmes_t* tm)
     }
   }
 
-  start_measure(tm);
+  start_timer(tm);
 
   for (i = 0; i < 2000; i++) {
     cmat_det(m, &det);
   }
 
-  stop_measure(tm);
+  stop_timer(tm);
 
   cmat_destroy(m);
 }
@@ -161,14 +161,14 @@ bench_inverse(tmmes_t* tm)
     }
   }
 
-  start_measure(tm);
+  start_timer(tm);
 
   for (i = 0; i < 2000; i++) {
     cmat_inverse(m1, &m2);
     cmat_destroy(m2);
   }
 
-  stop_measure(tm);
+  stop_timer(tm);
 
   cmat_destroy(m1);
 }
@@ -181,22 +181,22 @@ main(int argc, char* argv[])
   tmmes_t tm;
 
   bench_add(&tm);
-  printf("add     %10fmsec\n", tm.tm / 1000000.0);
+  printf("add     %10.2f msec\n", tm.tm / 1000000.0);
 
   bench_sub(&tm);
-  printf("sub     %10fmsec\n", tm.tm / 1000000.0);
+  printf("sub     %10.2f msec\n", tm.tm / 1000000.0);
 
   bench_mul(&tm);
-  printf("mul     %10fmsec\n", tm.tm / 1000000.0);
+  printf("mul     %10.2f msec\n", tm.tm / 1000000.0);
 
   bench_product(&tm);
-  printf("product %10fmsec\n", tm.tm / 1000000.0);
+  printf("product %10.2f msec\n", tm.tm / 1000000.0);
 
   bench_det(&tm);
-  printf("det     %10fmsec\n", tm.tm / 1000000.0);
+  printf("det     %10.2f msec\n", tm.tm / 1000000.0);
 
   bench_inverse(&tm);
-  printf("inverse %10fmsec\n", tm.tm / 1000000.0);
+  printf("inverse %10.2f msec\n", tm.tm / 1000000.0);
 
   return 0;
 }
