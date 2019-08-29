@@ -12,12 +12,53 @@
 
 #include "cmat.h"
 
+#if defined(ENABLE_NEON) && (!defined(__ARM_NEON) && !defined(__ARM_NEON__))
+#error "ARM NEON instruction set is not available."
+#endif
+
+#ifdef ENABLE_NEON
+#include <arm_neon.h>
+#endif /* defined(ENABLE_NEON) */
+
 #define DEFAULT_ERROR       __LINE__
 #define DEFAULT_CUTOFF      1e-4
 
 #define GROW(n)             ((n * 13) / 10)
 #define SHRINK(n)           ((n * 10) / 13)
 #define SWAP(a,b,t)         do {t c; c = (a); (a) = (b); (b) = c;} while(0)
+
+#ifdef ENABLE_NEON
+#define ALIGN_ROWS(n)       ((n) + (4 - ((n) % 4)))
+#define ALIGN_COLS(n)       ((n) + (4 - ((n) % 4)))
+#else /* defined(ENABLE_NEON) */
+#define ALIGN_ROWS(n)       (n)
+#define ALIGN_COLS(n)       (n)
+#endif /* defined(ENABLE_NEON) */
+
+#ifdef ENABLE_NEON
+static void
+memcpy128(void* dst, void* src, size_t size)
+{
+  int i;
+
+  for (i = 0; i < size; i += 16) {
+    vst1q_u8(dst + i, vld1q_u8(src + i));
+  }
+}
+
+static void
+bzero128(void* dst, size_t size)
+{
+  int i;
+  uint8x16_t zero;
+
+  zero = vmovq_n_u8(0);
+
+  for (i = 0; i < size; i += 16) {
+    vst1q_u8(dst + i, zero);
+  }
+}
+#endif /* defined(ENABLE_NEON) */
 
 static int
 alloc_object(int rows, int cols, cmat_t* org, cmat_t** dst)
@@ -26,15 +67,23 @@ alloc_object(int rows, int cols, cmat_t* org, cmat_t** dst)
   float* tbl;
   float** row;
   cmat_t* obj;
+  int stride;
+  int capa;
   int i;
+#ifdef ENABLE_NEON
+  int j;
+#endif /* defined(ENABLE_NEON) */
 
   /*
    * initialize
    */
-  ret = 0;
-  tbl = NULL;
-  row = NULL;
-  obj = NULL;
+  ret    = 0;
+  tbl    = NULL;
+  row    = NULL;
+  obj    = NULL;
+
+  stride = ALIGN_COLS(cols);
+  capa   = ALIGN_ROWS(rows);
 
   do {
     /*
@@ -46,33 +95,30 @@ alloc_object(int rows, int cols, cmat_t* org, cmat_t** dst)
       break;
     }
 
-    if (rows > 0) {
-      tbl = (float*)malloc(sizeof(float) * rows * cols);
+    if (capa > 0) {
+      tbl = (float*)malloc(sizeof(float) * capa * stride);
       if (tbl == NULL) {
         ret = CMAT_ERR_NOMEM;
         break;
       }
 
-      row = (float**)malloc(sizeof(float*) * rows);
+      row = (float**)malloc(sizeof(float*) * capa);
       if (row == NULL) {
         ret = CMAT_ERR_NOMEM;
         break;
       }
+
+      for (i = 0; i < capa; i++) {
+        row[i] = tbl + (i * stride);
+      }
     }
 
-    /*
-     * setup object
-     */
-
-    for (i = 0; i < rows; i++) {
-      row[i] = tbl + (i * cols);
-    }
-
-    obj->tbl  = tbl;
-    obj->row  = row;
-    obj->rows = rows;
-    obj->cols = cols;
-    obj->capa = rows;
+    obj->tbl    = tbl;
+    obj->row    = row;
+    obj->rows   = rows;
+    obj->cols   = cols;
+    obj->stride = stride;
+    obj->capa   = capa;
 
     if (org) {
       obj->coff = org->coff;
@@ -120,14 +166,20 @@ alloc_table(float** src, int rows, int cols, float** dt, float*** dr)
   int ret;
   float* tbl;
   float** row;
+  int stride;
   int i;
+#ifdef ENABLE_NEON
+  int j;
+#endif /* defined(ENABLE_NEON) */
 
-  ret = 0;
-  tbl = NULL;
-  row = NULL;
+
+  ret    = 0;
+  tbl    = NULL;
+  row    = NULL;
+  stride = ALIGN_COLS(cols);
 
   do {
-    tbl = (float*)malloc(sizeof(float) * rows * cols);
+    tbl = (float*)malloc(sizeof(float) * rows * stride);
     if (tbl == NULL) {
       ret = CMAT_ERR_NOMEM;
       break;
@@ -143,7 +195,11 @@ alloc_table(float** src, int rows, int cols, float** dt, float*** dr)
   if (!ret) {
     for (i = 0; i < rows; i++) {
       row[i] = tbl + (i * cols);
+
       if (src) memcpy(row[i], src[i], sizeof(float) * cols);
+#ifdef ENABLE_NEON
+      for (j = cols; j < stride; j++) row[i][j] = 0.0f;
+#endif /* defined(ENABLE_NEON) */
     }
 
     *dt = tbl;
@@ -377,9 +433,20 @@ calc_inverse(float** src, int n, float** dst)
   float* di;
   float* dj;
 
+#ifdef ENABLE_NEON
+  float32x4_t vs;
+  float32x4_t vo;
+  float32x4_t vd;
+#endif /* defined(ENABLE_NEON) */
+
   /* create identity matrix */
   for (i = 0; i < n; i++) {
+#ifdef ENABLE_NEON
+    bzero128(dst[i], sizeof(float) * n);
+#else /* defined(ENABLE_NEON) */
     memset(dst[i], 0, sizeof(float) * n);
+#endif /* defined(ENABLE_NEON) */
+
     dst[i][i] = 1.0;
   }
 
@@ -482,6 +549,7 @@ cmat_new(float* src, int rows, int cols, cmat_t** dst)
 {
   int ret;
   cmat_t* obj;
+  int i;
 
   /*
    * initialize
@@ -521,9 +589,16 @@ cmat_new(float* src, int rows, int cols, cmat_t** dst)
    */
   if (!ret) {
     if (src) {
-      memcpy(obj->tbl, src, sizeof(float) * rows * cols);
+      for (i = 0; i < rows; i++) {
+        memcpy(obj->row[i], src, sizeof(float) * cols);
+        src += cols;
+      }
     } else {
-      memset(obj->tbl, 0, sizeof(float) * rows * cols);
+#ifdef ENABLE_NEON
+      bzero128(obj->tbl, sizeof(float) * rows * obj->stride);
+#else /* defined(ENABLE_NEON) */
+      memset(obj->tbl, 0, sizeof(float) * rows * obj->stride);
+#endif /* defined(ENABLE_NEON) */
     }
   }
 
@@ -591,7 +666,11 @@ cmat_clone(cmat_t* ptr, cmat_t** dst)
    * copy values
    */
   if (!ret) {
-    memcpy(obj->tbl, ptr->tbl, sizeof(float) * ptr->rows * ptr->cols);
+#ifdef ENABLE_NEON
+    memcpy128(obj->tbl, ptr->tbl, sizeof(float) * ptr->rows * ptr->stride);
+#else /* defined(ENABLE_NEON) */
+    memcpy(obj->tbl, ptr->tbl, sizeof(float) * ptr->rows * ptr->stride);
+#endif /* defined(ENABLE_NEON) */
 
     for (i = 0; i < ptr->rows; i ++) {
       obj->row[i] = obj->tbl + (ptr->row[i] - ptr->tbl);
@@ -730,6 +809,9 @@ cmat_append(cmat_t* ptr, float* src)
   float** row;
   int capa;
   int i;
+#ifdef ENABLE_NEON
+  int j;
+#endif /* defined(ENABLE_NEON) */
 
   /*
    * initialize
@@ -759,23 +841,43 @@ cmat_append(cmat_t* ptr, float* src)
   if (!ret) do {
     if (ptr->capa == ptr->rows) {
       capa = (ptr->capa < 10)? 10: GROW(ptr->capa);
+      capa = ALIGN_ROWS(capa);
 
-      tbl  = (float*)realloc(ptr->tbl, sizeof(float) * capa * ptr->cols);
+      tbl  = (float*)realloc(ptr->tbl, sizeof(float) * capa * ptr->stride);
       if (tbl == NULL) {
         ret = CMAT_ERR_NOMEM;
         break;
       }
 
-      row  = (float**)realloc(ptr->row, sizeof(float*) * capa);
+      /* LU分解などで置換が発生している可能性がある。このため既存の行配置
+         を再現する必要がある（==既存の行テーブルを参照する必要がある）の
+         でrealloc()は使わない */
+      row  = (float**)malloc(sizeof(float*) * capa);
       if (row == NULL) {
         ret = CMAT_ERR_NOMEM;
         break;
       }
 
-      for (i = 0; i < capa; i++) {
-        row[i] = tbl + (i * ptr->cols);
+      if (ptr->row) {
+        /* 既存の行構成を再現する（他の演算でピボット操作で行位置が交換さ
+           れている場合がある） */
+        for (i = 0; i < ptr->capa; i++) {
+          row[i] = tbl + (ptr->row[i] - ptr->tbl);
+        }
+
+        /* 既存の行テーブルは不要になったので解放 */
+        free(ptr->row);
+
+      } else {
+        ptr->capa = 0;
       }
 
+      /* 新規の部分の行構成を設定 */
+      for (i = ptr->capa; i < capa; i++) {
+        row[i] = tbl + (i * ptr->stride);
+      }
+
+      /* コンテキストの更新 */
       ptr->tbl  = tbl;
       ptr->row  = row;
       ptr->capa = capa;
@@ -786,7 +888,12 @@ cmat_append(cmat_t* ptr, float* src)
    * update context
    */
   if (!ret) {
-    memcpy(ptr->row[ptr->rows++], src, sizeof(float) * ptr->cols);
+    memcpy(ptr->row[ptr->rows], src, sizeof(float) * ptr->cols);
+#ifdef ENABLE_NEON
+    for (j = ptr->cols; j < ptr->stride; j++) ptr->row[ptr->rows][j] = 0.0f;
+#endif /* defined(ENABLE_NEON) */
+
+    ptr->rows++;
   }
 
   /*
@@ -819,9 +926,15 @@ cmat_add(cmat_t* ptr, cmat_t* op, cmat_t** dst)
   int r;
   int c;
 
-  float* d;
   float* s;
   float* o;
+  float* d;
+
+#ifdef ENABLE_NEON
+  float32x4_t vs;
+  float32x4_t vo;
+  float32x4_t vd;
+#endif /* defined(ENABLE_NEON) */
 
   /*
    * initialize
@@ -867,13 +980,27 @@ cmat_add(cmat_t* ptr, cmat_t* op, cmat_t** dst)
    */
   if (!ret) {
     for (r = 0; r < ptr->rows; r++) {
-      d = obj->row[r];
       s = ptr->row[r];
       o = op->row[r];
+      d = obj->row[r];
 
-      for (c = 0; c < ptr->cols; c++) {
+#ifdef ENABLE_NEON
+      for (c = 0; c < ptr->cols; c += 4) {
+        vs = vld1q_f32(s);
+        vo = vld1q_f32(o);
+        vd = vaddq_f32(vs, vo);
+
+        vst1q_f32(d, vd);
+
+        s += 4;
+        o += 4;
+        d += 4;
+      }
+#else /* defined(ENABLE_NEON) */
+      for (c = 0; c < ptr->stride; c++) {
         d[c] = s[c] + o[c];
       }
+#endif /* defined(ENABLE_NEON) */
     }
   }
 
@@ -913,9 +1040,15 @@ cmat_sub(cmat_t* ptr, cmat_t* op, cmat_t** dst)
   int r;
   int c;
 
-  float* d;
   float* s;
   float* o;
+  float* d;
+
+#ifdef ENABLE_NEON
+  float32x4_t vs;
+  float32x4_t vo;
+  float32x4_t vd;
+#endif /* defined(ENABLE_NEON) */
 
   /*
    * initialize
@@ -961,13 +1094,27 @@ cmat_sub(cmat_t* ptr, cmat_t* op, cmat_t** dst)
    */
   if (!ret) {
     for (r = 0; r < ptr->rows; r++) {
-      d = obj->row[r];
       s = ptr->row[r];
       o = op->row[r];
+      d = obj->row[r];
 
+#ifdef ENABLE_NEON
+      for (c = 0; c < ptr->cols; c += 4) {
+        vs = vld1q_f32(s);
+        vo = vld1q_f32(o);
+        vd = vsubq_f32(vs, vo);
+
+        vst1q_f32(d, vd);
+
+        s += 4;
+        o += 4;
+        d += 4;
+      }
+#else /* defined(ENABLE_NEON) */
       for (c = 0; c < ptr->cols; c++) {
         d[c] = s[c] - o[c];
       }
+#endif /* defined(ENABLE_NEON) */
     }
   }
 
@@ -1007,8 +1154,14 @@ cmat_mul(cmat_t* ptr, float op, cmat_t** dst)
   int r;
   int c;
 
-  float* d;
   float* s;
+  float* d;
+
+#ifdef ENABLE_NEON
+  float32x4_t vs;
+  float32x4_t vo;
+  float32x4_t vd;
+#endif /* defined(ENABLE_NEON) */
 
   /*
    * initialize
@@ -1046,14 +1199,33 @@ cmat_mul(cmat_t* ptr, float op, cmat_t** dst)
    * do add operation
    */
   if (!ret) {
+#ifdef ENABLE_NEON
+    vo = vmovq_n_f32(op);
+
     for (r = 0; r < ptr->rows; r++) {
-      d = obj->row[r];
       s = ptr->row[r];
+      d = obj->row[r];
+
+      for (c = 0; c < ptr->cols; c += 4) {
+        vs = vld1q_f32(s);
+        vd = vmulq_f32(vs, vo);
+
+        vst1q_f32(d, vd);
+
+        s += 4;
+        d += 4;
+      }
+    }
+#else /* defined(ENABLE_NEON) */
+    for (r = 0; r < ptr->rows; r++) {
+      s = ptr->row[r];
+      d = obj->row[r];
 
       for (c = 0; c < ptr->cols; c++) {
         d[c] = s[c] * op;
       }
     }
+#endif /* defined(ENABLE_NEON) */
   }
 
   /*
@@ -1093,8 +1265,18 @@ cmat_product(cmat_t* ptr, cmat_t* op, cmat_t** dst)
   int c;
   int i;
 
-  float* d;
+#ifdef ENABLE_NEON
+  float** s;
+  float** o;
+  float** d;
+
+  float32x4_t vs;
+  float32x4_t vo;
+  float32x4_t vd;
+#else /* defined(ENABLE_NEON) */
   float* s;
+  float* d;
+#endif /* defined(ENABLE_NEON) */
 
   /*
    * initialize
@@ -1135,10 +1317,41 @@ cmat_product(cmat_t* ptr, cmat_t* op, cmat_t** dst)
    * do multiple operation
    */
   if (!ret) {
+#ifdef ENABLE_NEON
+    s = ptr->row;
+    o = op->row;
+    d = obj->row;
 
+    for (r = 0; r < ptr->rows; r += 4) {
+      for (c = 0; c < op->cols; c++) {
+        // set 0 to destination
+        vd = vmovq_n_f32(0.0f);
+
+        for (i = 0; i < ptr->cols; i++) {
+          // load sources
+          vs = vsetq_lane_f32(s[r+0][i], vs, 0);
+          vs = vsetq_lane_f32(s[r+1][i], vs, 1);
+          vs = vsetq_lane_f32(s[r+2][i], vs, 2);
+          vs = vsetq_lane_f32(s[r+3][i], vs, 3);
+
+          // load operands
+          vo = vmovq_n_f32(o[i][c]);
+
+          // do product-sum
+          vd = vmlaq_f32(vd, vs, vo);
+        }
+
+        // store destination
+        d[r+0][c] = vgetq_lane_f32(vd, 0);
+        d[r+1][c] = vgetq_lane_f32(vd, 1);
+        d[r+2][c] = vgetq_lane_f32(vd, 2);
+        d[r+3][c] = vgetq_lane_f32(vd, 3);
+      }
+    }
+#else /* defined(ENABLE_NEON) */
     for (r = 0; r < ptr->rows; r++) {
-      d = obj->row[r];
       s = ptr->row[r];
+      d = obj->row[r];
 
       for (c = 0; c < op->cols; c++) {
         d[c] = 0.0;
@@ -1148,6 +1361,7 @@ cmat_product(cmat_t* ptr, cmat_t* op, cmat_t** dst)
         }
       }
     }
+#endif /* defined(ENABLE_NEON) */
   }
 
   /*
@@ -1313,7 +1527,11 @@ cmat_inverse(cmat_t* ptr, cmat_t** dst)
       ret = alloc_object(ptr->rows, ptr->cols, ptr, &obj);
       if (!ret) {
         for (i = 0; i < ptr->rows; i++) {
+#ifdef ENABLE_NEON
+          memcpy128(sr[i], ptr->row[i], sizeof(float) * ptr->cols);
+#else /* defined(ENABLE_NEON) */
           memcpy(sr[i], ptr->row[i], sizeof(float) * ptr->cols);
+#endif /* defined(ENABLE_NEON) */
         }
 
         dt = obj->tbl;
@@ -1425,7 +1643,11 @@ cmat_lu_decomp(cmat_t* ptr, cmat_t** dst, int* piv)
       ret = alloc_object(ptr->rows, ptr->cols, ptr, &obj);
       if (!ret) {
         for (i = 0; i < ptr->rows; i++) {
+#ifdef ENABLE_NEON
+          memcpy128(obj->row[i], ptr->row[i], sizeof(float) * ptr->cols);
+#else /* defined(ENABLE_NEON) */
           memcpy(obj->row[i], ptr->row[i], sizeof(float) * ptr->cols);
+#endif /* defined(ENABLE_NEON) */
         }
 
         row = obj->row;

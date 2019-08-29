@@ -18,6 +18,24 @@ check_matrix(cmat_t* ptr, const matrix_info_t* info)
   int res;
 
   cmat_check(ptr, info->val, &res);
+
+#if 0
+  if (res) {
+    cmat_t* m;
+    cmat_t* d;
+
+    create_matrix(info, &m);
+    cmat_sub(ptr, m, &d);
+
+    cmat_print(ptr, "val");
+    cmat_print(m, "master");
+    cmat_print(d, "diff");
+
+    cmat_destroy(m);
+    cmat_destroy(d);
+  }
+#endif
+
   CU_ASSERT(res == 0);
   CU_ASSERT(ptr->rows == info->rows);
   CU_ASSERT(ptr->cols == info->cols);

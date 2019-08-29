@@ -13,6 +13,7 @@ typedef struct {
 
   int rows;
   int cols;
+  int stride;
 
   int capa;
   float coff;  // as cutoff

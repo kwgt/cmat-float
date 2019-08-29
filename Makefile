@@ -1,4 +1,8 @@
-CFLAGS    += -O0 -g -I./include -DDEBUG
+CFLAGS    += -g -I./include -DDEBUG
+
+CFLAGS    += -O3 -ftree-vectorize
+CFLAGS    += -DENABLE_NEON
+
 LDFLAGS   += -g -L./lib -lcunit
 
 CSRC      := src/cmat.c
@@ -18,6 +22,9 @@ src/cmat.c: include/cmat.h
 
 test:
 	make -C tests
+
+benchmark:
+	make -C tests benchmark
 
 clean:
 	make -C tests $@

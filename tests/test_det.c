@@ -13,7 +13,7 @@ create_matrix(const matrix_info_t* info, cmat_t** dst)
   return cmat_new(info->val, info->rows, info->cols, dst);
 }
 
-static void
+static int
 check_det(float a, float b)
 {
   int s1;
@@ -32,10 +32,7 @@ check_det(float a, float b)
 
   // 行列式の計算結果が非常に大きな値になる場合があるので
   // 数値そのものの一致では無く、有効桁数で確認を行っている
-
-  CU_ASSERT(s1 == s2);                  // 符号の一致を確認
-  CU_ASSERT(e1 == e2);                  // 指数の一致を確認
-  CU_ASSERT(fabs(v1 - v2) < 1e-5);      // 仮数の差が範囲内であることを確認
+  return s1 == s2 && e1 == e2 && fabs(v1 - v2) < 1e-5;
 }
 
 static void
@@ -50,16 +47,16 @@ test_normal_1(void)
 
     cmat_det(m1, &det);
 
-#if 0
-    printf("\n");
-    cmat_print(m1, NULL);
-    printf("\n");
-    cmat_print(m2, NULL);
-    printf("\n");
-    cmat_print(m3, NULL);
-#endif
+    CU_ASSERT(check_det(det, data[i].ans));
 
-    check_det(det, data[i].ans);
+#if 0
+    if (!check_det(det, data[i].ans)) {
+      printf("\n");
+      cmat_print(m1, NULL);
+      printf("%f %f\n", det, data[i].ans);
+      exit(0);
+    }
+#endif
 
     cmat_destroy(m1);
   }
